@@ -4,8 +4,9 @@ services:
     name: harvestify-backend
     runtime: image
     rootDir: backend
+    repo: https://github.com/yourusername/harvestify  # Add your repo URL
     image:
-      dockerfilePath: ./Dockerfile
+      dockerfilePath: Dockerfile  # Remove the ./ prefix
     envVars:
       - key: FLASK_ENV
         value: production
@@ -30,7 +31,7 @@ services:
       - key: EMAIL_PASS
         sync: false
       - key: BASE_URL
-        sync: false
+        value: https://harvestify-frontend.onrender.com
 
   # Frontend Static Site
   - type: web
