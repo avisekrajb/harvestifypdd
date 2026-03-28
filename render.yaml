@@ -1,5 +1,4 @@
 services:
-  # Backend API Service
   - type: web
     name: harvestify-backend
     runtime: image
@@ -31,14 +30,3 @@ services:
         sync: false
       - key: BASE_URL
         sync: false
-
-  # Frontend Static Site
-  - type: web
-    name: harvestify-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: build
-    envVars:
-      - key: REACT_APP_API_URL
-        value: https://harvestify-backend.onrender.com/api
