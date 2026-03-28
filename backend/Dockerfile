@@ -10,15 +10,17 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
+# Upgrade pip and setuptools first
 RUN pip install --upgrade pip setuptools wheel
+
+# Copy requirements and install
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the rest of the application
 COPY . .
 
-# Create uploads directory
+# Create necessary directories
 RUN mkdir -p uploads
 
 # Set environment variables
