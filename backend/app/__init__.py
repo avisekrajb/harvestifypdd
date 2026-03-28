@@ -218,17 +218,16 @@ def create_app():
     app.config.from_object('app.config.Config')
     
     # Configure CORS properly for production
-    cors_origins = [
+    allowed_origins = [
         'http://localhost:3000',
         'http://localhost:5173',
         'http://localhost:80',
         'http://localhost',
-        'https://harvestifyfinalyear.onrender.com',  # Your frontend URL
-        'https://harvestifypdd-1.onrender.com',      # Your backend URL
+        'https://harvestifyfinalyear.onrender.com'
     ]
     
     CORS(app, 
-         origins=cors_origins,
+         origins=allowed_origins,
          supports_credentials=True,
          allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
@@ -277,10 +276,10 @@ def create_app():
     app.register_blueprint(user.bp)
     app.register_blueprint(disease.bp)
     
-    # Add health check endpoint
+    # Health check endpoint
     @app.route('/api/health', methods=['GET'])
     def health_check():
-        return jsonify({'status': 'healthy', 'message': 'Harvestify API is running'})
+        return jsonify({'status': 'healthy', 'message': 'API is running'})
     
     # Error handlers
     @app.errorhandler(404)
@@ -296,9 +295,10 @@ def create_app():
     def handle_options():
         if request.method == 'OPTIONS':
             response = app.make_default_options_response()
-            # Allow all origins for preflight
-            origin = request.headers.get('Origin', '*')
-            response.headers.add('Access-Control-Allow-Origin', origin)
+            # Allow your frontend origin
+            origin = request.headers.get('Origin', '')
+            if origin in allowed_origins:
+                response.headers.add('Access-Control-Allow-Origin', origin)
             response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
             response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
             response.headers.add('Access-Control-Allow-Credentials', 'true')
