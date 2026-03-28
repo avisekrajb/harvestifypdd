@@ -1,4 +1,3 @@
-# render.yaml
 services:
   # Backend API Service
   - type: web
@@ -6,7 +5,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: |
-      pip install --upgrade pip
+      pip install --upgrade pip setuptools wheel
       pip install -r requirements.txt
     startCommand: gunicorn wsgi:app
     envVars:
