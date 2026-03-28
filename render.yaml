@@ -1,16 +1,12 @@
 services:
-  # Backend API Service
+  # Backend API Service using Docker
   - type: web
     name: harvestify-backend
-    runtime: python
+    runtime: image
     rootDir: backend
-    buildCommand: |
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
-    startCommand: gunicorn wsgi:app
+    image:
+      dockerfilePath: ./Dockerfile
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: FLASK_ENV
         value: production
       - key: MONGODB_URI
