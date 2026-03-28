@@ -1,0 +1,49 @@
+# render.yaml
+services:
+  # Backend API Service
+  - type: web
+    name: harvestify-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: BASE_URL
+        sync: false
+
+  # Frontend Static Site
+  - type: web
+    name: harvestify-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://harvestify-backend.onrender.com/api
