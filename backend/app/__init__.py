@@ -217,9 +217,18 @@ def create_app():
     
     app.config.from_object('app.config.Config')
     
-    # Configure CORS properly
+    # Configure CORS properly for production
+    cors_origins = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:80',
+        'http://localhost',
+        'https://harvestifyfinalyear.onrender.com',  # Your frontend URL
+        'https://harvestifypdd-1.onrender.com',      # Your backend URL
+    ]
+    
     CORS(app, 
-         origins=['http://localhost:3000', 'http://localhost:5173', 'http://localhost:80', 'http://localhost'],
+         origins=cors_origins,
          supports_credentials=True,
          allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
          methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
@@ -268,6 +277,11 @@ def create_app():
     app.register_blueprint(user.bp)
     app.register_blueprint(disease.bp)
     
+    # Add health check endpoint
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        return jsonify({'status': 'healthy', 'message': 'Harvestify API is running'})
+    
     # Error handlers
     @app.errorhandler(404)
     def not_found(error):
@@ -282,10 +296,13 @@ def create_app():
     def handle_options():
         if request.method == 'OPTIONS':
             response = app.make_default_options_response()
-            response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', 'http://localhost:5173'))
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            # Allow all origins for preflight
+            origin = request.headers.get('Origin', '*')
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
             response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
             response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Max-Age', '86400')
             return response
     
     return app
