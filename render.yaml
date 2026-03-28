@@ -4,9 +4,8 @@ services:
     name: harvestify-backend
     runtime: image
     rootDir: backend
-    repo: https://github.com/yourusername/harvestify  # Add your repo URL
     image:
-      dockerfilePath: Dockerfile  # Remove the ./ prefix
+      dockerfilePath: Dockerfile
     envVars:
       - key: FLASK_ENV
         value: production
