@@ -1,5 +1,5 @@
 services:
-  # Backend API Service using Docker
+  # Backend API Service
   - type: web
     name: harvestify-backend
     runtime: image
@@ -30,7 +30,7 @@ services:
       - key: EMAIL_PASS
         sync: false
       - key: BASE_URL
-        value: https://harvestify-frontend.onrender.com
+        sync: false
 
   # Frontend Static Site
   - type: web
