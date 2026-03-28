@@ -1,0 +1,12 @@
+# Backend specific
+instance/
+.env
+.env.local
+.env.production
+.env.development
+*.db
+*.sqlite
+uploads/
+temp/
+__pycache__/
+*.pyc

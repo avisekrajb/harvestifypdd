@@ -1,0 +1,62 @@
+.history-crop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crop-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  width: fit-content;
+}
+
+.soil-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--surface2);
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.nutrient-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nutrient-badges span {
+  padding: 3px 8px;
+  background: var(--surface2);
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.fertilizer-badge {
+  padding: 6px 14px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.fertilizer-details {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+}

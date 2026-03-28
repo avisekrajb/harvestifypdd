@@ -1,0 +1,17 @@
+flask==3.0.3
+flask-cors==4.0.1
+flask-jwt-extended==4.6.0
+flask-bcrypt==1.0.1
+flask-mail==0.10.0
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.0
+requests==2.32.3
+python-dotenv==1.0.1
+pymongo==4.8.0
+certifi==2024.7.4
+cloudinary==1.36.0
+python-dateutil==2.9.0
+werkzeug==3.0.3
+gunicorn==22.0.0
+google-generativeai==0.8.3

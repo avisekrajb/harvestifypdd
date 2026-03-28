@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  overflow-x: hidden;
+  transition: background 0.35s, color 0.35s;
+}
+
+:root {
+  --ink: #f0f4f8;
+  --ink2: #e8eef5;
+  --ink3: #dde6ef;
+  --surface: #ffffff;
+  --surface2: #f5f8fb;
+  --surface3: #edf2f7;
+  --border: rgba(0, 0, 0, 0.07);
+  --border2: rgba(0, 0, 0, 0.13);
+  --text: #0d1217;
+  --text2: #2d3748;
+  --muted: #718096;
+  --accent: #16a34a;
+  --accent2: #15803d;
+  --gold: #d97706;
+  --rose: #db2777;
+  --sky: #2563eb;
+  --violet: #7c3aed;
+  --nav-bg: rgba(240, 244, 248, 0.92);
+  --nav-border: rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+  --shadow: 0 8px 40px rgba(0, 0, 0, 0.10);
+  --shadow2: 0 24px 80px rgba(0, 0, 0, 0.15);
+  --modal-bg: #ffffff;
+  --toggle-track: #d1d5db;
+  --toggle-thumb: #ffffff;
+  --hero-text: white;
+}
+
+[data-theme="dark"] {
+  --ink: #0a0d0f;
+  --ink2: #111518;
+  --ink3: #181e22;
+  --surface: #1a2028;
+  --surface2: #212a33;
+  --surface3: #263040;
+  --border: rgba(255, 255, 255, 0.07);
+  --border2: rgba(255, 255, 255, 0.13);
+  --text: #e8edf0;
+  --text2: #b0bec8;
+  --muted: #6b7d8a;
+  --accent: #4ade80;
+  --accent2: #22c55e;
+  --gold: #fbbf24;
+  --rose: #f472b6;
+  --sky: #60a5fa;
+  --violet: #a78bfa;
+  --nav-bg: rgba(10, 13, 15, 0.92);
+  --nav-border: rgba(255, 255, 255, 0.07);
+  --card-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  --shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  --shadow2: 0 24px 80px rgba(0, 0, 0, 0.6);
+  --modal-bg: #111518;
+  --toggle-track: #4ade80;
+  --toggle-thumb: #0a0d0f;
+  --hero-text: white;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ink2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent2);
+  border-radius: 99px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+button {
+  font-family: 'Outfit', sans-serif;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--muted);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
