@@ -1,17 +1,27 @@
+# Core Flask
 flask==3.0.3
 flask-cors==4.0.1
 flask-jwt-extended==4.6.0
 flask-bcrypt==1.0.1
 flask-mail==0.10.0
+
+# ML & Data (simplified versions that build reliably)
 numpy==1.24.3
 scikit-learn==1.3.0
 joblib==1.3.2
+
+# External APIs
 requests==2.32.3
-python-dotenv==1.0.1
-pymongo==4.8.0
-certifi==2024.7.4
-cloudinary==1.36.0
-python-dateutil==2.9.0
-werkzeug==3.0.3
-gunicorn==22.0.0
 google-generativeai==0.8.3
+
+# Database & Storage
+pymongo==4.8.0
+cloudinary==1.36.0
+
+# Utilities
+python-dotenv==1.0.1
+python-dateutil==2.9.0
+certifi==2024.7.4
+
+# Production Server
+gunicorn==22.0.0
