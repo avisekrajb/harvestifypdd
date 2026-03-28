@@ -6,25 +6,29 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    python3-dev \
     libffi-dev \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install setuptools FIRST (critical)
+# Create a virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install setuptools FIRST (critical fix)
 RUN pip install --upgrade pip setuptools wheel
 
-# Copy and install requirements
+# Copy requirements first for caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Install dependencies with verbose output
+RUN pip install --verbose --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
 
 # Create necessary directories
 RUN mkdir -p uploads
 
-# Set environment variables
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
