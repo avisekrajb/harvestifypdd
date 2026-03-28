@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 60000, // Increased timeout for Gemini API
+  timeout: 60000,
   withCredentials: false
 })
 
@@ -224,7 +224,7 @@ export const markMessageRead = async (id) => {
 export const detectDisease = async (formData) => {
   const response = await api.post('/disease/detect', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000 // 2 minutes timeout for Gemini processing
+    timeout: 120000
   })
   return response.data
 }
