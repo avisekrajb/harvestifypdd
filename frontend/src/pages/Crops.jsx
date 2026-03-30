@@ -31,19 +31,46 @@ const Crops = () => {
     }
   }, [activeTab])
 
-  const fetchHistory = async () => {
-    setHistoryLoading(true)
-    try {
-      const data = await getUserCropHistory()
-      setHistory(data.history || [])
-    } catch (error) {
-      console.error('History fetch error:', error)
-      toast.error(error.error || 'Failed to fetch history')
-      setHistory([])
-    } finally {
-      setHistoryLoading(false)
-    }
+ const fetchHistory = async () => {
+  // Check if user is logged in
+  if (!user) {
+    console.log('No user logged in');
+    toast.error('Please login to view history');
+    setHistory([]);
+    setHistoryLoading(false);
+    return;
   }
+  
+  console.log('Fetching history for user:', user.id);
+  setHistoryLoading(true);
+  
+  try {
+    const data = await getUserCropHistory();
+    console.log('History response:', data);
+    
+    if (data.history && data.history.length > 0) {
+      setHistory(data.history);
+      toast.success(`Found ${data.history.length} history entries`);
+    } else {
+      setHistory([]);
+      toast('No history yet. Make a crop recommendation first!');
+    }
+  } catch (error) {
+    console.error('History fetch error:', error);
+    console.error('Error details:', error.response?.data);
+    
+    if (error.response?.status === 401) {
+      toast.error('Session expired. Please login again.');
+      // Optionally redirect to login
+      // navigate('/?login=true');
+    } else {
+      toast.error(error.response?.data?.error || 'Failed to fetch history');
+    }
+    setHistory([]);
+  } finally {
+    setHistoryLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target
