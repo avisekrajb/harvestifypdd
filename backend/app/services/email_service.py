@@ -1,327 +1,616 @@
-import React, { useState, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { createOrder } from '../services/api'
-import { FaWallet, FaTruck, FaImage, FaCheckCircle, FaSpinner } from 'react-icons/fa'
-import toast from 'react-hot-toast'
-import './CheckoutModal.css'
+from flask import current_app
+from flask_mail import Message
+import logging
+import random
+import string
+import os
+from app import mail
 
-const CheckoutModal = ({ cart, onClose, onPlaceOrder }) => {
-  const { user, updateProfile } = useAuth()
-  const [step, setStep] = useState(1)
-  const [paymentMethod, setPaymentMethod] = useState('cod')
-  const [wantConsultation, setWantConsultation] = useState(false)
-  const [transactionId, setTransactionId] = useState('')
-  const [screenshot, setScreenshot] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const fileInputRef = useRef()
+logger = logging.getLogger(__name__)
 
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || ''
-  })
+def get_mail():
+    """Get mail instance from current app"""
+    return mail
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shipping = subtotal > 500 ? 0 : 50
-  const total = subtotal + shipping
+def get_base_url():
+    """Get base URL from config (development vs production)"""
+    # Use FRONTEND_URL for email links (not backend API)
+    frontend_url = os.getenv('FRONTEND_URL', os.getenv('BASE_URL', 'http://localhost:3000'))
+    return frontend_url
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
-    if (!formData.name || !formData.address || !formData.phone) {
-      toast.error('Please fill all required fields')
-      return
-    }
+def generate_otp():
+    """Generate 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
 
-    if (paymentMethod === 'paytm' && !transactionId) {
-      toast.error('Please enter transaction ID')
-      return
-    }
+def test_email_connection():
+    """Test email configuration"""
+    try:
+        print("\n=== Testing Email Configuration ===")
+        print(f"MAIL_SERVER: {current_app.config.get('MAIL_SERVER')}")
+        print(f"MAIL_PORT: {current_app.config.get('MAIL_PORT')}")
+        print(f"MAIL_USE_TLS: {current_app.config.get('MAIL_USE_TLS')}")
+        print(f"MAIL_USERNAME: {current_app.config.get('MAIL_USERNAME')}")
+        print(f"MAIL_PASSWORD: {'*' * len(current_app.config.get('MAIL_PASSWORD', '')) if current_app.config.get('MAIL_PASSWORD') else 'NOT SET'}")
+        print("===================================\n")
+        return True
+    except Exception as e:
+        print(f"Error testing email config: {e}")
+        return False
 
-    setLoading(true)
-    
-    // Show loading toast
-    const loadingToast = toast.loading('Placing your order...')
-    
-    try {
-      const orderData = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        items: cart.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image
-        })),
-        subtotal,
-        shipping,
-        total,
-        payment_method: paymentMethod,
-        transaction_id: paymentMethod === 'paytm' ? transactionId : null,
-        screenshot: paymentMethod === 'paytm' ? screenshot : null,
-        want_consultation: wantConsultation
-      }
-
-      console.log('Sending order data:', orderData)
-      
-      const response = await createOrder(orderData)
-      console.log('Order response:', response)
-      
-      // Update profile if needed
-      if (formData.name !== user?.name || formData.phone !== user?.phone || formData.address !== user?.address) {
-        await updateProfile(formData)
-      }
-      
-      toast.dismiss(loadingToast)
-      toast.success('Order placed successfully! 🎉')
-      onPlaceOrder()
-      onClose()
-    } catch (error) {
-      console.error('Order error:', error)
-      toast.dismiss(loadingToast)
-      
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        toast.error('Request timed out. Please check your internet connection and try again.')
-      } else if (error.response?.status === 401) {
-        toast.error('Please login again to place order')
-      } else if (error.response?.data?.error) {
-        toast.error(error.response.data.error)
-      } else {
-        toast.error('Failed to place order. Please try again.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleScreenshotUpload = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size should be less than 5MB')
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setScreenshot(event.target.result)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  return (
-    <div className="checkout-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="checkout-modal">
-        <button className="checkout-close" onClick={onClose}>✕</button>
+def send_welcome_email(email, name):
+    """Send welcome email to new users"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
         
-        <div className="checkout-header">
-          <h2>Checkout</h2>
-          <p>Complete your order details</p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="checkout-steps">
-            <div className={`step ${step >= 1 ? 'active' : ''}`}>
-              <div className="step-number">1</div>
-              <div className="step-label">Details</div>
-            </div>
-            <div className="step-line" />
-            <div className={`step ${step >= 2 ? 'active' : ''}`}>
-              <div className="step-number">2</div>
-              <div className="step-label">Payment</div>
-            </div>
-          </div>
-
-          {step === 1 && (
-            <div className="checkout-section">
-              <h3>Delivery Information</h3>
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Email *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Phone *</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Delivery Address *</label>
-                <textarea
-                  rows="3"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div className="consultation-option">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={wantConsultation}
-                    onChange={(e) => setWantConsultation(e.target.checked)}
-                  />
-                  <span className="checkbox-custom">
-                    {wantConsultation && <FaCheckCircle />}
-                  </span>
-                  <span>Request Agronomist Consultation</span>
-                </label>
-                <p className="consultation-note">
-                  An expert agronomist will contact you after delivery
-                </p>
-              </div>
-
-              <button
-                type="button"
-                className="next-btn"
-                onClick={() => setStep(2)}
-              >
-                Continue to Payment →
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="checkout-section">
-              <h3>Payment Method</h3>
-              
-              <div className="payment-methods">
-                <label className={`payment-option ${paymentMethod === 'cod' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <div className="payment-icon"><FaTruck /></div>
-                  <div className="payment-details">
-                    <strong>Cash on Delivery</strong>
-                    <span>Pay when you receive the order</span>
-                  </div>
-                </label>
-
-                <label className={`payment-option ${paymentMethod === 'paytm' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="paytm"
-                    checked={paymentMethod === 'paytm'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  />
-                  <div className="payment-icon"><FaWallet /></div>
-                  <div className="payment-details">
-                    <strong>Paytm / UPI</strong>
-                    <span>Pay using Paytm, Google Pay, PhonePe</span>
-                  </div>
-                </label>
-              </div>
-
-              {paymentMethod === 'paytm' && (
-                <div className="payment-instructions">
-                  <div className="qr-placeholder">
-                    <div className="qr-emoji">📱</div>
-                    <p>Pay to: <strong>harvestify@paytm</strong></p>
-                    <p className="amount">Amount: ₹{total.toLocaleString()}</p>
-                  </div>
-                  
-                  <div className="upload-section">
-                    <label>Transaction ID / UTR</label>
-                    <input
-                      type="text"
-                      placeholder="Enter transaction ID"
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                    />
+        msg = Message(
+            subject='Welcome to Harvestify! 🌾',
+            recipients=[email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 28px;">🌾 Welcome to Harvestify!</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #16a34a; margin-top: 0;">Hello {name}!</h2>
+                    <p style="font-size: 16px;">Thank you for joining Harvestify - your intelligent farming companion!</p>
                     
-                    <label>Upload Payment Screenshot</label>
-                    <div 
-                      className="upload-area"
-                      onClick={() => fileInputRef.current.click()}
-                    >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*"
-                        onChange={handleScreenshotUpload}
-                        style={{ display: 'none' }}
-                      />
-                      {screenshot ? (
-                        <img src={screenshot} alt="Screenshot" className="screenshot-preview" />
-                      ) : (
-                        <>
-                          <FaImage />
-                          <p>Click to upload screenshot</p>
-                          <small>Max 5MB</small>
-                        </>
-                      )}
+                    <h3 style="color: #333; margin-top: 25px;">With Harvestify, you can:</h3>
+                    <ul style="padding-left: 20px; line-height: 1.8;">
+                        <li>🌱 Get AI-powered crop recommendations</li>
+                        <li>🧪 Receive personalized fertilizer advice</li>
+                        <li>🔬 Detect crop diseases instantly</li>
+                        <li>📦 Shop premium agricultural products</li>
+                        <li>👨‍🌾 Consult with expert agronomists</li>
+                    </ul>
+                    
+                    <p style="margin-top: 25px;">Start exploring your farming journey with us today!</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{frontend_url}/dashboard" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
+                            Get Started →
+                        </a>
                     </div>
-                  </div>
                 </div>
-              )}
-
-              <div className="order-summary">
-                <h3>Order Summary</h3>
-                <div className="summary-items">
-                  {cart.map(item => (
-                    <div key={item.id} className="summary-item">
-                      <span>{item.name} x {item.quantity}</span>
-                      <span>₹{(item.price * item.quantity).toLocaleString()}</span>
-                    </div>
-                  ))}
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                    <p>© 2025 Harvestify. All rights reserved.</p>
+                    <p style="margin-top: 10px;">
+                        <a href="{frontend_url}/unsubscribe" style="color: #16a34a;">Unsubscribe</a> | 
+                        <a href="{frontend_url}/privacy" style="color: #16a34a;">Privacy Policy</a>
+                    </p>
                 </div>
-                <div className="summary-totals">
-                  <div className="summary-row">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="summary-row">
-                    <span>Shipping</span>
-                    <span>{shipping === 0 ? 'Free' : `₹${shipping}`}</span>
-                  </div>
-                  <div className="summary-row total">
-                    <span>Total</span>
-                    <span>₹{total.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="checkout-actions">
-                <button type="button" className="back-btn" onClick={() => setStep(1)} disabled={loading}>
-                  ← Back
-                </button>
-                <button type="submit" className="place-order-btn" disabled={loading}>
-                  {loading ? <><FaSpinner className="spinning" /> Processing...</> : `Place Order • ₹${total.toLocaleString()}`}
-                </button>
-              </div>
             </div>
-          )}
-        </form>
-      </div>
-    </div>
-  )
-}
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Welcome email sent to {email}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send welcome email to {email}: {error_msg}")
+        
+        if "Authentication" in error_msg:
+            return False, "Email authentication failed. Please check your email password (use App Password for Gmail)."
+        elif "Connection refused" in error_msg:
+            return False, "Cannot connect to email server. Check SMTP settings."
+        elif "Timeout" in error_msg:
+            return False, "Email server timeout. Check your internet connection."
+        else:
+            return False, f"Failed to send email: {error_msg}"
 
-export default CheckoutModal
+def send_order_confirmation(email, order_id, items, total):
+    """Send order confirmation email"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        items_html = ''
+        for item in items:
+            items_html += f"""
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">{item.get('name', 'Product')}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">{item.get('quantity', 1)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹{item.get('price', 0)}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹{item.get('price', 0) * item.get('quantity', 1)}</td>
+            </tr>
+            """
+        
+        msg = Message(
+            subject=f'Order Confirmed! #{order_id}',
+            recipients=[email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">✅ Order Confirmed!</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2>Order #{order_id}</h2>
+                    <p>Thank you for your order! We'll process it soon.</p>
+                    
+                    <h3>Order Summary:</h3>
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 12px; text-align: left;">Product</th>
+                                <th style="padding: 12px; text-align: center;">Qty</th>
+                                <th style="padding: 12px; text-align: right;">Price</th>
+                                <th style="padding: 12px; text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {items_html}
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px; text-align: right;">
+                        <strong>Total Amount: ₹{total}</strong>
+                    </div>
+                    
+                    <p style="margin-top: 20px;">We'll notify you when your order is shipped.</p>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="{frontend_url}/orders/{order_id}" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
+                            Track Order →
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Order confirmation email sent to {email} for order #{order_id}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send order confirmation to {email}: {error_msg}")
+        return False, error_msg
+
+def send_otp_email(email, otp):
+    """Send OTP for password reset"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        msg = Message(
+            subject='Password Reset OTP - Harvestify',
+            recipients=[email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">🔐 Password Reset OTP</h1>
+                </div>
+                <div style="padding: 30px; text-align: center;">
+                    <h2>Your OTP Code:</h2>
+                    <div style="font-size: 40px; font-weight: bold; padding: 20px; background: #f3f4f6; border-radius: 8px; letter-spacing: 8px;">
+                        {otp}
+                    </div>
+                    <p style="margin-top: 20px;">This OTP will expire in <strong>10 minutes</strong>.</p>
+                    <p>If you didn't request this, please ignore this email.</p>
+                    
+                    <div style="margin-top: 30px;">
+                        <a href="{frontend_url}/reset-password" style="color: #16a34a;">Reset Password</a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ OTP email sent to {email}")
+        return True, "OTP sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send OTP to {email}: {error_msg}")
+        return False, error_msg
+
+def send_order_status_update(email, order_id, status):
+    """Send order status update email"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        status_emoji = {
+            'pending': '⏳',
+            'processing': '🔄',
+            'shipped': '🚚',
+            'delivered': '✅',
+            'cancelled': '❌'
+        }.get(status, '📦')
+        
+        status_text = {
+            'pending': 'Pending Confirmation',
+            'processing': 'Processing',
+            'shipped': 'Shipped',
+            'delivered': 'Delivered',
+            'cancelled': 'Cancelled'
+        }.get(status, status)
+        
+        msg = Message(
+            subject=f'Order Status Update - #{order_id}',
+            recipients=[email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">{status_emoji} Order Status Update</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2>Order #{order_id}</h2>
+                    <div style="padding: 15px; background: #f3f4f6; border-radius: 8px; text-align: center;">
+                        <strong style="color: #16a34a;">Status: {status_text}</strong>
+                    </div>
+                    <p style="margin-top: 20px;">Your order is now <strong>{status_text}</strong>.</p>
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="{frontend_url}/orders/{order_id}" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
+                            View Details →
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Status update email sent to {email} for order #{order_id}")
+        return True, "Status update sent"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send status update to {email}: {error_msg}")
+        return False, error_msg
+
+def send_doctor_creation_email(doctor_email, doctor_name, password):
+    """Send email to doctor when account is created"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        msg = Message(
+            subject='Welcome to Harvestify Doctor Panel! 👨‍⚕️',
+            recipients=[doctor_email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">👨‍⚕️ Welcome to Harvestify!</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2>Hello Dr. {doctor_name},</h2>
+                    <p>Congratulations! You've been added as an Agronomist/Doctor on the Harvestify platform.</p>
+                    
+                    <h3>Your Account Details:</h3>
+                    <ul style="background: #f3f4f6; padding: 20px; border-radius: 8px;">
+                        <li><strong>Email:</strong> {doctor_email}</li>
+                        <li><strong>Password:</strong> {password}</li>
+                    </ul>
+                    
+                    <p style="margin-top: 20px;">Please login and change your password immediately.</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="{frontend_url}/doctor/login" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
+                            Login to Dashboard →
+                        </a>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 8px;">
+                        <p style="margin: 0; color: #92400e;">📋 <strong>Your Responsibilities:</strong></p>
+                        <ul style="margin-top: 10px; color: #92400e;">
+                            <li>Provide expert advice to assigned farmers</li>
+                            <li>Review crop health reports</li>
+                            <li>Recommend appropriate treatments</li>
+                            <li>Respond to farmer queries within 24 hours</li>
+                        </ul>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Doctor creation email sent to {doctor_email}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send doctor creation email: {error_msg}")
+        return False, error_msg
+
+def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_email, user_phone, user_address, order_id):
+    """Send email to doctor when assigned to a user"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        msg = Message(
+            subject=f'New Farmer Assigned - Order #{order_id}',
+            recipients=[doctor_email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">👨‍🌾 New Farmer Assigned</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2>Hello Dr. {doctor_name},</h2>
+                    <p>A new farmer has been assigned to you for consultation.</p>
+                    
+                    <h3>Farmer Details:</h3>
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px;">
+                        <p><strong>Name:</strong> {user_name}</p>
+                        <p><strong>Email:</strong> {user_email}</p>
+                        <p><strong>Phone:</strong> {user_phone}</p>
+                        <p><strong>Address:</strong> {user_address}</p>
+                        <p><strong>Order ID:</strong> #{order_id}</p>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
+                        <p style="margin: 0; color: #166534;">📋 <strong>Next Steps:</strong></p>
+                        <ul style="margin-top: 10px; color: #166534;">
+                            <li>Review the farmer's order details</li>
+                            <li>Contact the farmer within 24 hours</li>
+                            <li>Provide expert agricultural advice</li>
+                            <li>Follow up on crop progress</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="{frontend_url}/doctor/dashboard" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
+                            View Dashboard →
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Doctor assignment email sent to {doctor_email}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send doctor assignment email: {error_msg}")
+        return False, error_msg
+
+def send_user_assignment_notification(user_email, user_name, doctor_name, doctor_speciality):
+    """Send email to user when doctor is assigned"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        msg = Message(
+            subject='Expert Agronomist Assigned to You! 👨‍🌾',
+            recipients=[user_email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+        </head>
+        <body style="font-family: Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white;">👨‍🌾 Expert Assigned!</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2>Hello {user_name},</h2>
+                    <p>We're pleased to inform you that an expert agronomist has been assigned to assist you!</p>
+                    
+                    <h3>Your Assigned Expert:</h3>
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px;">
+                        <p><strong>Name:</strong> Dr. {doctor_name}</p>
+                        <p><strong>Speciality:</strong> {doctor_speciality}</p>
+                    </div>
+                    
+                    <p>Your expert will contact you soon to discuss your farming needs and provide personalized guidance.</p>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
+                        <p style="margin: 0; color: #166534;">💡 <strong>What to expect:</strong></p>
+                        <ul style="margin-top: 10px; color: #166534;">
+                            <li>Personalized consultation call within 24 hours</li>
+                            <li>Expert advice on crop selection and management</li>
+                            <li>Guidance on fertilizer and pesticide use</li>
+                            <li>Ongoing support throughout your farming journey</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="{frontend_url}/dashboard" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
+                            Go to Dashboard →
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ User assignment notification sent to {user_email}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send user assignment notification: {error_msg}")
+        return False, error_msg
+
+def send_consultation_status_email(user_email, user_name, doctor_name, status, notes):
+    """Send consultation status update email to user"""
+    try:
+        mail = get_mail()
+        frontend_url = get_base_url()
+        
+        status_text = {
+            'pending': 'Pending Review',
+            'success': 'Completed Successfully'
+        }.get(status, status)
+        
+        status_emoji = {
+            'pending': '⏳',
+            'success': '✅'
+        }.get(status, '📋')
+        
+        status_color = {
+            'pending': '#fbbf24',
+            'success': '#4ade80'
+        }.get(status, '#16a34a')
+        
+        msg = Message(
+            subject=f'Consultation Update - Dr. {doctor_name}',
+            recipients=[user_email],
+            sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
+        )
+        
+        msg.html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">{status_emoji} Consultation Update</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #16a34a;">Hello {user_name}!</h2>
+                    <p>Your consultation with <strong>Dr. {doctor_name}</strong> has been updated.</p>
+                    
+                    <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0 0 10px 0;"><strong>Status:</strong> 
+                            <span style="background: {status_color}; color: white; padding: 4px 12px; border-radius: 99px; font-size: 0.85rem;">
+                                {status_text}
+                            </span>
+                        </p>
+                        <p style="margin: 0;"><strong>Doctor's Notes:</strong></p>
+                        <p style="margin: 10px 0 0 0; color: #4b5563;">{notes or 'No additional notes provided'}</p>
+                    </div>
+                    
+                    {status == 'success' and """
+                    <div style="background: #dcfce7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0; color: #166534;">✨ <strong>Congratulations!</strong> Your consultation has been completed successfully. If you have any further questions, feel free to reach out to your doctor.</p>
+                    </div>
+                    """}
+                    
+                    {status == 'pending' and """
+                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 0; color: #92400e;">⏳ Your consultation is pending review. Your doctor will update you soon.</p>
+                    </div>
+                    """}
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <a href="{frontend_url}/dashboard" 
+                           style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
+                            View Dashboard →
+                        </a>
+                    </div>
+                </div>
+                <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
+                    <p>Harvestify - Intelligent Farming Solutions</p>
+                    <p>© 2025 Harvestify. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        mail.send(msg)
+        logger.info(f"✅ Consultation status email sent to {user_email}")
+        return True, "Email sent successfully"
+        
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"❌ Failed to send consultation status email: {error_msg}")
+        return False, error_msg
