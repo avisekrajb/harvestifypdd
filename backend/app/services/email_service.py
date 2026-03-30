@@ -18,7 +18,11 @@ def get_base_url():
     if env == 'development':
         return os.getenv('BASE_URL', 'http://localhost:5000')
     else:
-        return os.getenv('BASE_URL', 'https://harvestify.com')
+        return os.getenv('BASE_URL', 'https://harvestifyfinalyear.onrender.com')
+
+def get_frontend_url():
+    """Get frontend URL for email links"""
+    return os.getenv('FRONTEND_URL', 'https://harvestifyfinalyear.onrender.com')
 
 def generate_otp():
     """Generate 6-digit OTP"""
@@ -43,10 +47,10 @@ def send_welcome_email(email, name):
     """Send welcome email to new users"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         msg = Message(
-            subject='Welcome to Harvestify! 🌾',
+            subject='Welcome to Harvestify!',
             recipients=[email],
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
         )
@@ -61,7 +65,7 @@ def send_welcome_email(email, name):
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 28px;">🌾 Welcome to Harvestify!</h1>
+                    <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to Harvestify!</h1>
                 </div>
                 <div style="padding: 30px;">
                     <h2 style="color: #16a34a; margin-top: 0;">Hello {name}!</h2>
@@ -69,29 +73,25 @@ def send_welcome_email(email, name):
                     
                     <h3 style="color: #333; margin-top: 25px;">With Harvestify, you can:</h3>
                     <ul style="padding-left: 20px; line-height: 1.8;">
-                        <li>🌱 Get AI-powered crop recommendations</li>
-                        <li>🧪 Receive personalized fertilizer advice</li>
-                        <li>🔬 Detect crop diseases instantly</li>
-                        <li>📦 Shop premium agricultural products</li>
-                        <li>👨‍🌾 Consult with expert agronomists</li>
+                        <li>Get AI-powered crop recommendations</li>
+                        <li>Receive personalized fertilizer advice</li>
+                        <li>Detect crop diseases instantly</li>
+                        <li>Shop premium agricultural products</li>
+                        <li>Consult with expert agronomists</li>
                     </ul>
                     
                     <p style="margin-top: 25px;">Start exploring your farming journey with us today!</p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="{base_url}/dashboard" 
+                        <a href="{frontend_url}/dashboard" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
-                            Get Started →
+                            Get Started
                         </a>
                     </div>
                 </div>
                 <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
                     <p>Harvestify - Intelligent Farming Solutions</p>
-                    <p>© 2024 Harvestify. All rights reserved.</p>
-                    <p style="margin-top: 10px;">
-                        <a href="{base_url}/unsubscribe" style="color: #16a34a;">Unsubscribe</a> | 
-                        <a href="{base_url}/privacy" style="color: #16a34a;">Privacy Policy</a>
-                    </p>
+                    <p>&copy; 2024 Harvestify. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -99,27 +99,19 @@ def send_welcome_email(email, name):
         """
         
         mail.send(msg)
-        logger.info(f"✅ Welcome email sent to {email}")
+        logger.info(f"Welcome email sent to {email}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send welcome email to {email}: {error_msg}")
-        
-        if "Authentication" in error_msg:
-            return False, "Email authentication failed. Please check your email password (use App Password for Gmail)."
-        elif "Connection refused" in error_msg:
-            return False, "Cannot connect to email server. Check SMTP settings."
-        elif "Timeout" in error_msg:
-            return False, "Email server timeout. Check your internet connection."
-        else:
-            return False, f"Failed to send email: {error_msg}"
+        logger.error(f"Failed to send welcome email to {email}: {error_msg}")
+        return False, error_msg
 
 def send_order_confirmation(email, order_id, items, total):
     """Send order confirmation email"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         items_html = ''
         for item in items:
@@ -129,7 +121,7 @@ def send_order_confirmation(email, order_id, items, total):
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">{item.get('quantity', 1)}</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹{item.get('price', 0)}</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹{item.get('price', 0) * item.get('quantity', 1)}</td>
-              </tr>
+            </tr>
             """
         
         msg = Message(
@@ -147,7 +139,7 @@ def send_order_confirmation(email, order_id, items, total):
         <body style="font-family: Arial, sans-serif;">
             <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white;">✅ Order Confirmed!</h1>
+                    <h1 style="color: white;">Order Confirmed!</h1>
                 </div>
                 <div style="padding: 30px;">
                     <h2>Order #{order_id}</h2>
@@ -161,7 +153,7 @@ def send_order_confirmation(email, order_id, items, total):
                                 <th style="padding: 12px; text-align: center;">Qty</th>
                                 <th style="padding: 12px; text-align: right;">Price</th>
                                 <th style="padding: 12px; text-align: right;">Total</th>
-                             </tr>
+                            </tr>
                         </thead>
                         <tbody>
                             {items_html}
@@ -175,9 +167,9 @@ def send_order_confirmation(email, order_id, items, total):
                     <p style="margin-top: 20px;">We'll notify you when your order is shipped.</p>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="{base_url}/orders/{order_id}" 
+                        <a href="{frontend_url}/orders/{order_id}" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
-                            Track Order →
+                            Track Order
                         </a>
                     </div>
                 </div>
@@ -190,19 +182,19 @@ def send_order_confirmation(email, order_id, items, total):
         """
         
         mail.send(msg)
-        logger.info(f"✅ Order confirmation email sent to {email} for order #{order_id}")
+        logger.info(f"Order confirmation email sent to {email} for order #{order_id}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send order confirmation to {email}: {error_msg}")
+        logger.error(f"Failed to send order confirmation to {email}: {error_msg}")
         return False, error_msg
 
 def send_otp_email(email, otp):
     """Send OTP for password reset"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         msg = Message(
             subject='Password Reset OTP - Harvestify',
@@ -219,7 +211,7 @@ def send_otp_email(email, otp):
         <body style="font-family: Arial, sans-serif;">
             <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white;">🔐 Password Reset OTP</h1>
+                    <h1 style="color: white;">Password Reset OTP</h1>
                 </div>
                 <div style="padding: 30px; text-align: center;">
                     <h2>Your OTP Code:</h2>
@@ -230,7 +222,7 @@ def send_otp_email(email, otp):
                     <p>If you didn't request this, please ignore this email.</p>
                     
                     <div style="margin-top: 30px;">
-                        <a href="{base_url}/reset-password" style="color: #16a34a;">Reset Password</a>
+                        <a href="{frontend_url}/reset-password" style="color: #16a34a;">Reset Password</a>
                     </div>
                 </div>
                 <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280;">
@@ -242,19 +234,19 @@ def send_otp_email(email, otp):
         """
         
         mail.send(msg)
-        logger.info(f"✅ OTP email sent to {email}")
+        logger.info(f"OTP email sent to {email}")
         return True, "OTP sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send OTP to {email}: {error_msg}")
+        logger.error(f"Failed to send OTP to {email}: {error_msg}")
         return False, error_msg
 
 def send_order_status_update(email, order_id, status):
     """Send order status update email"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         status_emoji = {
             'pending': '⏳',
@@ -296,9 +288,9 @@ def send_order_status_update(email, order_id, status):
                     </div>
                     <p style="margin-top: 20px;">Your order is now <strong>{status_text}</strong>.</p>
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="{base_url}/orders/{order_id}" 
+                        <a href="{frontend_url}/orders/{order_id}" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
-                            View Details →
+                            View Details
                         </a>
                     </div>
                 </div>
@@ -311,22 +303,22 @@ def send_order_status_update(email, order_id, status):
         """
         
         mail.send(msg)
-        logger.info(f"✅ Status update email sent to {email} for order #{order_id}")
+        logger.info(f"Status update email sent to {email} for order #{order_id}")
         return True, "Status update sent"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send status update to {email}: {error_msg}")
+        logger.error(f"Failed to send status update to {email}: {error_msg}")
         return False, error_msg
 
 def send_doctor_creation_email(doctor_email, doctor_name, password):
     """Send email to doctor when account is created"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         msg = Message(
-            subject='Welcome to Harvestify Doctor Panel! 👨‍⚕️',
+            subject='Welcome to Harvestify Doctor Panel!',
             recipients=[doctor_email],
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
         )
@@ -340,7 +332,7 @@ def send_doctor_creation_email(doctor_email, doctor_name, password):
         <body style="font-family: Arial, sans-serif;">
             <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white;">👨‍⚕️ Welcome to Harvestify!</h1>
+                    <h1 style="color: white;">Welcome to Harvestify!</h1>
                 </div>
                 <div style="padding: 30px;">
                     <h2>Hello Dr. {doctor_name},</h2>
@@ -355,14 +347,14 @@ def send_doctor_creation_email(doctor_email, doctor_name, password):
                     <p style="margin-top: 20px;">Please login and change your password immediately.</p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="{base_url}/doctor/login" 
+                        <a href="{frontend_url}/doctor/login" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
-                            Login to Dashboard →
+                            Login to Dashboard
                         </a>
                     </div>
                     
                     <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 8px;">
-                        <p style="margin: 0; color: #92400e;">📋 <strong>Your Responsibilities:</strong></p>
+                        <p style="margin: 0; color: #92400e;"><strong>Your Responsibilities:</strong></p>
                         <ul style="margin-top: 10px; color: #92400e;">
                             <li>Provide expert advice to assigned farmers</li>
                             <li>Review crop health reports</li>
@@ -380,19 +372,19 @@ def send_doctor_creation_email(doctor_email, doctor_name, password):
         """
         
         mail.send(msg)
-        logger.info(f"✅ Doctor creation email sent to {doctor_email}")
+        logger.info(f"Doctor creation email sent to {doctor_email}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send doctor creation email: {error_msg}")
+        logger.error(f"Failed to send doctor creation email: {error_msg}")
         return False, error_msg
 
 def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_email, user_phone, user_address, order_id):
     """Send email to doctor when assigned to a user"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         msg = Message(
             subject=f'New Farmer Assigned - Order #{order_id}',
@@ -409,7 +401,7 @@ def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_emai
         <body style="font-family: Arial, sans-serif;">
             <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white;">👨‍🌾 New Farmer Assigned</h1>
+                    <h1 style="color: white;">New Farmer Assigned</h1>
                 </div>
                 <div style="padding: 30px;">
                     <h2>Hello Dr. {doctor_name},</h2>
@@ -425,7 +417,7 @@ def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_emai
                     </div>
                     
                     <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
-                        <p style="margin: 0; color: #166534;">📋 <strong>Next Steps:</strong></p>
+                        <p style="margin: 0; color: #166534;"><strong>Next Steps:</strong></p>
                         <ul style="margin-top: 10px; color: #166534;">
                             <li>Review the farmer's order details</li>
                             <li>Contact the farmer within 24 hours</li>
@@ -435,9 +427,9 @@ def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_emai
                     </div>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="{base_url}/doctor/dashboard" 
+                        <a href="{frontend_url}/doctor/dashboard" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
-                            View Dashboard →
+                            View Dashboard
                         </a>
                     </div>
                 </div>
@@ -450,22 +442,22 @@ def send_doctor_assignment_email(doctor_email, doctor_name, user_name, user_emai
         """
         
         mail.send(msg)
-        logger.info(f"✅ Doctor assignment email sent to {doctor_email}")
+        logger.info(f"Doctor assignment email sent to {doctor_email}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send doctor assignment email: {error_msg}")
+        logger.error(f"Failed to send doctor assignment email: {error_msg}")
         return False, error_msg
 
 def send_user_assignment_notification(user_email, user_name, doctor_name, doctor_speciality):
     """Send email to user when doctor is assigned"""
     try:
         mail = get_mail()
-        base_url = get_base_url()
+        frontend_url = get_frontend_url()
         
         msg = Message(
-            subject='Expert Agronomist Assigned to You! 👨‍🌾',
+            subject='Expert Agronomist Assigned to You!',
             recipients=[user_email],
             sender=current_app.config.get('MAIL_DEFAULT_SENDER', current_app.config.get('MAIL_USERNAME'))
         )
@@ -479,7 +471,7 @@ def send_user_assignment_notification(user_email, user_name, doctor_name, doctor
         <body style="font-family: Arial, sans-serif;">
             <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 30px; text-align: center;">
-                    <h1 style="color: white;">👨‍🌾 Expert Assigned!</h1>
+                    <h1 style="color: white;">Expert Assigned!</h1>
                 </div>
                 <div style="padding: 30px;">
                     <h2>Hello {user_name},</h2>
@@ -494,7 +486,7 @@ def send_user_assignment_notification(user_email, user_name, doctor_name, doctor
                     <p>Your expert will contact you soon to discuss your farming needs and provide personalized guidance.</p>
                     
                     <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
-                        <p style="margin: 0; color: #166534;">💡 <strong>What to expect:</strong></p>
+                        <p style="margin: 0; color: #166534;"><strong>What to expect:</strong></p>
                         <ul style="margin-top: 10px; color: #166534;">
                             <li>Personalized consultation call within 24 hours</li>
                             <li>Expert advice on crop selection and management</li>
@@ -504,9 +496,9 @@ def send_user_assignment_notification(user_email, user_name, doctor_name, doctor
                     </div>
                     
                     <div style="text-align: center; margin-top: 30px;">
-                        <a href="{base_url}/dashboard" 
+                        <a href="{frontend_url}/dashboard" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px;">
-                            Go to Dashboard →
+                            Go to Dashboard
                         </a>
                     </div>
                 </div>
@@ -519,23 +511,19 @@ def send_user_assignment_notification(user_email, user_name, doctor_name, doctor
         """
         
         mail.send(msg)
-        logger.info(f"✅ User assignment notification sent to {user_email}")
+        logger.info(f"User assignment notification sent to {user_email}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send user assignment notification: {error_msg}")
+        logger.error(f"Failed to send user assignment notification: {error_msg}")
         return False, error_msg
+
 def send_consultation_status_email(user_email, user_name, doctor_name, status, notes):
     """Send consultation status update email to user"""
     try:
-        from flask import current_app
-        from app import mail
-        from flask_mail import Message
-        import os
-        
-        # Use FRONTEND_URL for the dashboard link, not backend API
-        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        mail = get_mail()
+        frontend_url = get_frontend_url()
         
         status_text = {
             'pending': 'Pending Review',
@@ -584,28 +572,20 @@ def send_consultation_status_email(user_email, user_name, doctor_name, status, n
                         <p style="margin: 10px 0 0 0; color: #4b5563;">{notes or 'No additional notes provided'}</p>
                     </div>
                     
-                    {status == 'success' and """
-                    <div style="background: #dcfce7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0; color: #166534;">✨ <strong>Congratulations!</strong> Your consultation has been completed successfully. If you have any further questions, feel free to reach out to your doctor.</p>
+                    <div style="margin-top: 20px; padding: 15px; background: #dcfce7; border-radius: 8px;">
+                        <p style="margin: 0; color: #166534;"><strong>Congratulations!</strong> Your consultation has been completed successfully. If you have any further questions, feel free to reach out to your doctor.</p>
                     </div>
-                    """}
-                    
-                    {status == 'pending' and """
-                    <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0; color: #92400e;">⏳ Your consultation is pending review. Your doctor will update you soon.</p>
-                    </div>
-                    """}
                     
                     <div style="text-align: center; margin-top: 30px;">
                         <a href="{frontend_url}/dashboard" 
                            style="background: #16a34a; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
-                            View Dashboard →
+                            View Dashboard
                         </a>
                     </div>
                 </div>
                 <div style="background: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; font-size: 12px;">
                     <p>Harvestify - Intelligent Farming Solutions</p>
-                    <p>© 2024 Harvestify. All rights reserved.</p>
+                    <p>&copy; 2024 Harvestify. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -613,10 +593,10 @@ def send_consultation_status_email(user_email, user_name, doctor_name, status, n
         """
         
         mail.send(msg)
-        logger.info(f"✅ Consultation status email sent to {user_email}")
+        logger.info(f"Consultation status email sent to {user_email}")
         return True, "Email sent successfully"
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Failed to send consultation status email: {error_msg}")
+        logger.error(f"Failed to send consultation status email: {error_msg}")
         return False, error_msg
