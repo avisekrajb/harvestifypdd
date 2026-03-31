@@ -216,6 +216,7 @@ def detect_disease():
             }
             
             db.disease_history.insert_one(history_entry)
+            logger.info(f"Saved disease detection to history for user {user_id}")
         
         return jsonify(result)
         
@@ -228,6 +229,76 @@ def detect_disease():
             'geminiResponse': f'Server error: {str(e)}',
             'error': str(e)
         }), 200
+
+@bp.route('/history', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_history():
+    """Get user's disease detection history"""
+    if request.method == 'OPTIONS':
+        return _build_cors_response()
+    
+    try:
+        user_id = get_jwt_identity()
+        from app import db
+        from bson import ObjectId
+        
+        logger.info(f"Fetching disease history for user: {user_id}")
+        
+        # Check if collection exists
+        if 'disease_history' not in db.list_collection_names():
+            logger.info("disease_history collection does not exist yet")
+            return jsonify({'history': []}), 200
+        
+        history = list(db.disease_history.find(
+            {'user_id': ObjectId(user_id)}
+        ).sort('created_at', -1))
+        
+        for item in history:
+            item['_id'] = str(item['_id'])
+            item['user_id'] = str(item['user_id'])
+        
+        logger.info(f"Found {len(history)} history entries")
+        return jsonify({'history': history})
+        
+    except Exception as e:
+        logger.error(f"Error fetching history: {e}")
+        return jsonify({'history': []}), 200
+
+@bp.route('/history/<history_id>', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_history_detail(history_id):
+    """Get specific history entry details with full image URL"""
+    if request.method == 'OPTIONS':
+        return _build_cors_response()
+    
+    try:
+        user_id = get_jwt_identity()
+        from app import db
+        from bson import ObjectId
+        
+        logger.info(f"Fetching history detail: {history_id} for user: {user_id}")
+        
+        history = db.disease_history.find_one({
+            '_id': ObjectId(history_id),
+            'user_id': ObjectId(user_id)
+        })
+        
+        if not history:
+            return jsonify({'error': 'Not found'}), 404
+        
+        # Convert ObjectId to string
+        history['_id'] = str(history['_id'])
+        history['user_id'] = str(history['user_id'])
+        
+        # Ensure image_url is present and valid
+        if 'image_url' not in history or not history['image_url']:
+            history['image_url'] = None
+        
+        return jsonify(history)
+        
+    except Exception as e:
+        logger.error(f"Error fetching history detail: {e}")
+        return jsonify({'error': str(e)}), 500
 
 def _build_cors_response():
     response = jsonify({'message': 'OK'})
