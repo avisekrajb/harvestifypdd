@@ -121,16 +121,21 @@ const DiseaseDetection = () => {
     setUploadTime('');
   };
 
-  const viewHistoryDetail = async (id) => {
-    try {
-      const detail = await getDiseaseHistoryDetail(id);
-      setSelectedHistory(detail);
-      setShowDetailModal(true);
-    } catch (error) {
-      toast.error('Failed to load details');
-    }
-  };
+// Add function to view history details
+const viewHistoryDetail = async (id) => {
+  try {
+    const detail = await getDiseaseHistoryDetail(id);
+    setSelectedHistory(detail);
+    setShowDetailModal(true);
+  } catch (error) {
+    toast.error('Failed to load details');
+  }
+};
 
+// In the history table, add a View button
+<button className="view-btn" onClick={() => viewHistoryDetail(item._id)}>
+  <FaEye /> View Details
+</button>
   const getConfidenceClass = (confidence) => {
     if (confidence >= 70) return 'confidence-high';
     if (confidence >= 40) return 'confidence-medium';
