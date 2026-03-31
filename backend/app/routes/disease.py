@@ -7,7 +7,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
-import requests
 
 load_dotenv()
 
@@ -16,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 
-# Configure Cloudinary
+# Configure Cloudinary - reads from .env
 cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', 'daszwemxr'),
-    api_key=os.getenv('CLOUDINARY_API_KEY', '571699321555573'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET', 'HKAgrkmCBXvFsf4WIQHrC9PsOO4')
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET')
 )
 
 def allowed_file(filename):
@@ -45,19 +44,20 @@ def upload_to_cloudinary(image_bytes, filename):
         return None, None
 
 def analyze_with_gemini(image_base64):
-    """Analyze plant disease using Gemini AI with working model"""
+    """Analyze plant disease using Gemini AI - Reads API key from .env"""
     try:
         import google.generativeai as genai
         
-        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyCSEW3CagmcHFqiXiklqR77oW39eMjIk-c')
+        # Read API key from environment variable only
+        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
         
         if not GEMINI_API_KEY:
-            logger.error("GEMINI_API_KEY not found")
+            logger.error("GEMINI_API_KEY not found in environment variables")
             return None
         
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Use the working model from test - gemini-2.5-flash
+        # Use the working model from test
         model_name = 'gemini-2.5-flash'
         
         logger.info(f"Using model: {model_name}")
@@ -108,7 +108,7 @@ def analyze_with_gemini(image_base64):
             return None
         
     except ImportError:
-        logger.error("google-generativeai not installed")
+        logger.error("google-generativeai not installed. Run: pip install google-generativeai")
         return None
     except Exception as e:
         logger.error(f"Gemini error: {e}")
