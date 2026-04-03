@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   FaTruck, FaCheckCircle, FaBoxOpen, FaCreditCard, 
   FaMapMarkerAlt, FaClock, FaPhoneAlt, FaEnvelope, 
-  FaArrowLeft, FaSpinner, FaShareAlt, FaPrint, FaDownload 
+  FaArrowLeft, FaShareAlt, FaPrint, FaDownload,
+  FaSpinner
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import './OrderTracking.css';
@@ -18,6 +19,8 @@ const OrderTracking = () => {
 
   useEffect(() => {
     fetchOrderDetails();
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
   }, [orderId]);
 
   const fetchOrderDetails = async () => {
@@ -94,7 +97,7 @@ const OrderTracking = () => {
     return (
       <div className="tracking-container">
         <div className="loading-spinner">
-          <div className="spinner"></div>
+          <FaSpinner className="spinner" />
           <p>Loading order details...</p>
         </div>
       </div>
