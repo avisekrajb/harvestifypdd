@@ -1,10 +1,172 @@
-/* OrderTracking.css */
+/* OrderTracking.css - Complete Responsive Styles */
 
 .tracking-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  min-height: 100vh;
+  background: var(--background, #f5f7fa);
+}
+
+/* Mobile First - Base Styles (for screens under 480px) */
+@media (max-width: 480px) {
+  .tracking-container {
+    padding: 1rem;
+  }
+  
+  .tracking-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .header-actions {
+    justify-content: center;
+  }
+  
+  .order-id-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .order-id-section h1 {
+    font-size: 1.1rem;
+    word-break: break-all;
+  }
+  
+  .order-meta {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .meta-item {
+    font-size: 0.75rem;
+  }
+  
+  .timeline-steps {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: flex-start;
+    padding-left: 1rem;
+  }
+  
+  .timeline-step {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .timeline-progress {
+    display: none;
+  }
+  
+  .step-icon {
+    margin: 0;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .step-content {
+    text-align: left;
+  }
+  
+  .step-content h4 {
+    font-size: 0.85rem;
+  }
+  
+  .step-content p {
+    display: block;
+    font-size: 0.7rem;
+  }
+  
+  .order-item {
+    flex-wrap: wrap;
+  }
+  
+  .item-image {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .item-details h4 {
+    font-size: 0.8rem;
+  }
+  
+  .item-details p {
+    font-size: 0.7rem;
+  }
+  
+  .item-total {
+    margin-left: auto;
+    font-size: 0.85rem;
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .help-buttons {
+    flex-direction: column;
+  }
+  
+  .help-btn {
+    justify-content: center;
+  }
+}
+
+/* Tablet Styles (481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  .tracking-container {
+    padding: 1.5rem;
+  }
+  
+  .order-id-section h1 {
+    font-size: 1.2rem;
+  }
+  
+  .timeline-steps {
+    gap: 0.5rem;
+  }
+  
+  .timeline-step {
+    min-width: 80px;
+  }
+  
+  .step-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+  
+  .step-content h4 {
+    font-size: 0.7rem;
+  }
+  
+  .step-content p {
+    font-size: 0.6rem;
+  }
+}
+
+/* Desktop Styles (769px and above) */
+@media (min-width: 769px) {
+  .tracking-header {
+    flex-direction: row;
+  }
+  
+  .timeline-steps {
+    flex-direction: row;
+  }
+  
+  .order-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
 }
 
 /* Header Styles */
@@ -94,11 +256,10 @@
 }
 
 .status-badge.pending { background: #fef3c7; color: #d97706; }
-.status-badge.confirmed { background: #dbeafe; color: #2563eb; }
-.status-badge.processing { background: #e0e7ff; color: #4f46e5; }
+.status-badge.processing { background: #dbeafe; color: #2563eb; }
 .status-badge.shipped { background: #dcfce7; color: #16a34a; }
-.status-badge.out_for_delivery { background: #fef9c3; color: #ca8a04; }
 .status-badge.delivered { background: #dcfce7; color: #16a34a; }
+.status-badge.cancelled { background: #fee2e2; color: #dc2626; }
 
 .order-meta {
   display: flex;
@@ -148,7 +309,7 @@
   flex: 1;
   text-align: center;
   position: relative;
-  min-width: 120px;
+  min-width: 100px;
   opacity: 0.5;
   transition: all 0.3s;
 }
@@ -214,20 +375,6 @@
   margin: 0;
   font-size: 0.75rem;
   color: #64748b;
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .step-content p {
-    display: block;
-  }
-}
-
-.step-time {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-top: 0.25rem;
-  display: block;
 }
 
 /* Truck Animation */
@@ -244,6 +391,7 @@
   position: relative;
   height: 60px;
   margin-bottom: 1rem;
+  overflow: hidden;
 }
 
 .moving-truck {
@@ -266,7 +414,7 @@
 
 @keyframes moveTruck {
   0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(calc(100% - 50px)); }
+  50% { transform: translateX(calc(100% - 60px)); }
 }
 
 @keyframes trailGrow {
@@ -285,12 +433,6 @@
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
-}
-
-@media (max-width: 768px) {
-  .order-details-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Items Section */
@@ -312,6 +454,8 @@
 
 .items-list {
   padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .order-item {
@@ -328,8 +472,23 @@
 .item-image {
   width: 60px;
   height: 60px;
-  object-fit: cover;
+  background: #f0fdf4;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-emoji {
+  font-size: 1.5rem;
 }
 
 .item-details {
@@ -351,6 +510,17 @@
 .item-total {
   font-weight: 600;
   color: #16a34a;
+  white-space: nowrap;
+}
+
+.order-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e9ecef;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 /* Info Section */
@@ -383,21 +553,19 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.info-row.total {
-  font-weight: 700;
-  color: #16a34a;
-  font-size: 1.125rem;
+.info-row:last-child {
+  border-bottom: none;
 }
 
 .address-details {
   padding: 1rem 1.5rem;
-  line-height: 1.6;
+  line-height: 1.8;
   font-size: 0.875rem;
   color: #334155;
 }
 
 .contact-info {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid #e9ecef;
 }
@@ -480,6 +648,24 @@
   margin-bottom: 1rem;
 }
 
+.primary-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.2s;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -489,7 +675,8 @@
   .tracking-header,
   .help-section,
   .action-btn,
-  .back-btn {
+  .back-btn,
+  .header-actions {
     display: none;
   }
   
@@ -500,9 +687,17 @@
   .truck-animation {
     background: none;
     animation: none;
+    padding: 0;
   }
   
   .moving-truck {
     display: none;
+  }
+  
+  .order-summary,
+  .items-section,
+  .payment-info,
+  .shipping-info {
+    break-inside: avoid;
   }
 }
