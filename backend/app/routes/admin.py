@@ -5,6 +5,7 @@ import logging
 import random
 import string
 import traceback
+import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify
@@ -14,7 +15,12 @@ from bson import ObjectId
 from app import db
 from app.models.user import User
 from app.extensions import bcrypt
-from app.services.email_service import send_doctor_assignment_email, send_user_assignment_notification, send_doctor_creation_email
+from app.services.email_service import (
+    send_doctor_assignment_email, 
+    send_user_assignment_notification, 
+    send_doctor_creation_email,
+    send_order_status_update
+)
 
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 logger = logging.getLogger(__name__)
@@ -115,14 +121,16 @@ def update_order_status(order_id):
         
         update_data = {'status': status, 'updated_at': datetime.utcnow()}
         
+        # Get order details first
+        order = db.orders.find_one({'_id': ObjectId(order_id)})
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
         # If doctor is being assigned
         if doctor_name is not None:
             update_data['assigned_doctor'] = doctor_name if doctor_name else None
             
-            # Get the order details
-            order = db.orders.find_one({'_id': ObjectId(order_id)})
-            
-            if order and doctor_name:
+            if doctor_name and doctor_name != order.get('assigned_doctor'):
                 # Find doctor by name
                 doctor = db.doctors.find_one({'name': doctor_name})
                 
@@ -130,36 +138,53 @@ def update_order_status(order_id):
                     # Get user details
                     user = db.users.find_one({'_id': order['user_id']})
                     
-                    # Assign user to doctor
-                    db.doctors.update_one(
-                        {'_id': doctor['_id']},
-                        {'$addToSet': {'assigned_users': str(order['user_id'])}}
+                    if user:
+                        # Assign user to doctor
+                        db.doctors.update_one(
+                            {'_id': doctor['_id']},
+                            {'$addToSet': {'assigned_users': str(order['user_id'])}}
+                        )
+                        
+                        # Send email to doctor
+                        try:
+                            send_doctor_assignment_email(
+                                doctor['email'],
+                                doctor['name'],
+                                user['name'],
+                                user['email'],
+                                user.get('phone', 'Not provided'),
+                                user.get('address', 'Not provided'),
+                                order.get('order_id', order_id)
+                            )
+                            logger.info(f"Doctor assignment email sent to {doctor['email']}")
+                        except Exception as e:
+                            logger.error(f"Failed to send doctor assignment email: {e}")
+                        
+                        # Send email to user
+                        try:
+                            send_user_assignment_notification(
+                                user['email'],
+                                user['name'],
+                                doctor['name'],
+                                doctor.get('speciality', 'Agriculture Expert')
+                            )
+                            logger.info(f"User notification email sent to {user['email']}")
+                        except Exception as e:
+                            logger.error(f"Failed to send user notification email: {e}")
+        
+        # Send status update email to user if status changed
+        if status != order.get('status'):
+            user = db.users.find_one({'_id': order['user_id']})
+            if user and user.get('email'):
+                try:
+                    send_order_status_update(
+                        user['email'],
+                        order.get('order_id', order_id),
+                        status
                     )
-                    
-                    # Send email to doctor
-                    try:
-                        send_doctor_assignment_email(
-                            doctor['email'],
-                            doctor['name'],
-                            user['name'],
-                            user['email'],
-                            user.get('phone', 'Not provided'),
-                            user.get('address', 'Not provided'),
-                            order.get('order_id', order_id)
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to send doctor assignment email: {e}")
-                    
-                    # Send email to user
-                    try:
-                        send_user_assignment_notification(
-                            user['email'],
-                            user['name'],
-                            doctor['name'],
-                            doctor.get('speciality', 'Agriculture Expert')
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to send user notification email: {e}")
+                    logger.info(f"Order status update email sent to {user['email']} for order {order_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send order status update email: {e}")
         
         result = db.orders.update_one(
             {'_id': ObjectId(order_id)},
@@ -172,6 +197,7 @@ def update_order_status(order_id):
         return jsonify({'message': 'Order updated successfully'})
     except Exception as e:
         logger.error(f"Error updating order: {e}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/users', methods=['GET', 'OPTIONS'])
@@ -398,6 +424,7 @@ def create_doctor():
         # Send welcome email to doctor
         try:
             send_doctor_creation_email(data.get('email'), data.get('name'), temp_password)
+            logger.info(f"Doctor creation email sent to {data.get('email')}")
         except Exception as e:
             logger.error(f"Failed to send doctor creation email: {e}")
         
@@ -684,6 +711,7 @@ def delete_message(message_id):
     except Exception as e:
         logger.error(f"Error deleting message: {e}")
         return jsonify({'error': str(e)}), 500
+
 @bp.route('/upload-photo', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def upload_photo():
@@ -743,7 +771,7 @@ def upload_photo():
     except Exception as e:
         logger.error(f"Error uploading photo: {e}")
         return jsonify({'error': str(e)}), 500
-    
+
 @bp.route('/settings', methods=['GET', 'OPTIONS'])
 @jwt_required()
 def get_settings():
