@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { 
   FaLeaf, FaFlask, FaSearch, FaShoppingCart, FaUsers, 
   FaTruck, FaStar, FaArrowRight, FaSeedling, FaChartLine, 
   FaShieldAlt, FaPhoneAlt, FaEnvelope, FaMapMarkerAlt,
-  FaCheckCircle, FaPlay, FaQuoteLeft, FaAward, FaHandHoldingHeart
+  FaCheckCircle, FaPlay, FaQuoteLeft, FaAward, FaHandHoldingHeart,
+  FaFacebookF, FaTwitter, FaLinkedinIn, FaInstagram, FaSun, FaMoon
 } from 'react-icons/fa'
 import toast from 'react-hot-toast'
 import '../styles/Home.css'
@@ -13,6 +15,7 @@ import '../styles/Home.css'
 const Home = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { darkMode, toggleDarkMode } = useTheme()
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' })
 
   const features = [
@@ -28,6 +31,13 @@ const Home = () => {
     { name: 'Suresh Patel', role: 'Commercial Farmer', content: 'Best platform for modern farming. The products are top quality.', rating: 5, avatar: '👨‍🌾' }
   ]
 
+  const teamMembers = [
+    { name: 'Abhishek Rajbanshi', role: 'Founder & CEO', bio: 'Full-stack developer with passion for AgriTech', avatar: '👨‍💻', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } },
+    { name: 'Balu Pinisetti', role: 'Lead Agronomist', bio: 'Expert in crop disease management', avatar: '👨‍🌾', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } },
+    { name: 'Jyoti Kumari', role: 'AI Research Scientist', bio: 'Specialist in machine learning models', avatar: '👩‍🔬', icon: '👩', social: { linkedin: '#', twitter: '#', github: '#' } },
+    { name: 'Swami Nathan', role: 'Product Manager', bio: 'Agri-business expert with 10+ years experience', avatar: '👨‍💼', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } }
+  ]
+
   const handleContact = (e) => {
     e.preventDefault()
     if (!contactForm.name || !contactForm.email || !contactForm.message) {
@@ -39,7 +49,12 @@ const Home = () => {
   }
 
   return (
-    <div className="home-page">
+    <div className={`home-page ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+      {/* Theme Toggle Button */}
+      <button className="theme-toggle-fab" onClick={toggleDarkMode}>
+        {darkMode ? <FaSun /> : <FaMoon />}
+      </button>
+
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-bg-pattern"></div>
@@ -178,6 +193,35 @@ const Home = () => {
               <h3>Order Products</h3>
               <p>Shop recommended products delivered to your door</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section */}
+      <section className="team-section">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-badge">Our Team</span>
+            <h2 className="section-title">Meet Our Experts</h2>
+            <p className="section-description">Dedicated professionals working to transform agriculture</p>
+          </div>
+          <div className="team-grid">
+            {teamMembers.map((member, idx) => (
+              <div className="team-card" key={idx}>
+                <div className="team-avatar">
+                  <span className="avatar-emoji">{member.avatar}</span>
+                  <div className="avatar-icon">{member.icon}</div>
+                </div>
+                <h3 className="team-name">{member.name}</h3>
+                <p className="team-role">{member.role}</p>
+                <p className="team-bio">{member.bio}</p>
+                <div className="team-social">
+                  <a href={member.social.linkedin} target="_blank" rel="noopener noreferrer"><FaLinkedinIn /></a>
+                  <a href={member.social.twitter} target="_blank" rel="noopener noreferrer"><FaTwitter /></a>
+                  <a href={member.social.github} target="_blank" rel="noopener noreferrer"><FaFacebookF /></a>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
