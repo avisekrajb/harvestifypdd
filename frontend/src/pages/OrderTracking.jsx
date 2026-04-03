@@ -15,28 +15,16 @@ import {
   FaDownload,
   FaSpinner
 } from 'react-icons/fa';
-import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
 const OrderTracking = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [estimatedDelivery, setEstimatedDelivery] = useState(null);
-
-  // Status steps
-  const statusSteps = [
-    { key: 'pending', label: 'Order Placed', icon: FaCreditCard, description: 'Your order has been received and is being processed', timeLabel: 'Ordered on' },
-    { key: 'confirmed', label: 'Order Confirmed', icon: FaCheckCircle, description: 'Your order has been confirmed', timeLabel: 'Confirmed on' },
-    { key: 'processing', label: 'Processing', icon: FaBoxOpen, description: 'Your items are being packed', timeLabel: 'Processing started' },
-    { key: 'shipped', label: 'Shipped', icon: FaTruck, description: 'Your order is on the way!', timeLabel: 'Shipped on' },
-    { key: 'out_for_delivery', label: 'Out for Delivery', icon: FaTruck, description: 'Your order is out for delivery today!', timeLabel: 'Out for delivery' },
-    { key: 'delivered', label: 'Delivered', icon: FaCheckCircle, description: 'Your order has been delivered!', timeLabel: 'Delivered on' }
-  ];
 
   useEffect(() => {
     fetchOrderDetails();
@@ -45,16 +33,15 @@ const OrderTracking = () => {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      // Use the correct API endpoint
+      // Use the public endpoint - no auth required
       const response = await api.get(`/orders/by-order-number/${orderId}`);
       
       if (response.data.order) {
-        const orderData = response.data.order;
-        setOrder(orderData);
+        setOrder(response.data.order);
         
         // Calculate estimated delivery
-        if (orderData.created_at) {
-          const orderDate = new Date(orderData.created_at);
+        if (response.data.order.created_at) {
+          const orderDate = new Date(response.data.order.created_at);
           const minDelivery = new Date(orderDate);
           minDelivery.setDate(orderDate.getDate() + 3);
           const maxDelivery = new Date(orderDate);
@@ -77,23 +64,26 @@ const OrderTracking = () => {
     }
   };
 
-  const getCurrentStepIndex = () => {
-    if (!order) return 0;
-    const status = order.status || 'pending';
-    const index = statusSteps.findIndex(step => step.key === status);
-    return index >= 0 ? index : 0;
-  };
-
   const getStatusColor = (status) => {
     const colors = {
       'pending': '#f59e0b',
-      'confirmed': '#3b82f6',
-      'processing': '#8b5cf6',
+      'processing': '#3b82f6',
       'shipped': '#10b981',
-      'out_for_delivery': '#f97316',
-      'delivered': '#22c55e'
+      'delivered': '#22c55e',
+      'cancelled': '#ef4444'
     };
     return colors[status] || '#6b7280';
+  };
+
+  const getStatusSteps = () => {
+    const status = order?.status || 'pending';
+    const steps = [
+      { key: 'pending', label: 'Order Placed', icon: FaCreditCard, completed: ['pending', 'processing', 'shipped', 'delivered'].includes(status) },
+      { key: 'processing', label: 'Processing', icon: FaBoxOpen, completed: ['processing', 'shipped', 'delivered'].includes(status) },
+      { key: 'shipped', label: 'Shipped', icon: FaTruck, completed: ['shipped', 'delivered'].includes(status) },
+      { key: 'delivered', label: 'Delivered', icon: FaCheckCircle, completed: status === 'delivered' }
+    ];
+    return steps;
   };
 
   const handleShare = () => {
@@ -111,10 +101,6 @@ const OrderTracking = () => {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownloadInvoice = () => {
-    toast.info('Invoice download feature coming soon!');
   };
 
   if (loading) {
@@ -143,10 +129,11 @@ const OrderTracking = () => {
     );
   }
 
-  const currentStep = getCurrentStepIndex();
+  const statusSteps = getStatusSteps();
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
         <button onClick={() => navigate(-1)} style={styles.backBtn}>
           <FaArrowLeft /> Back
@@ -158,20 +145,17 @@ const OrderTracking = () => {
           <button onClick={handlePrint} style={styles.actionBtn}>
             <FaPrint /> Print
           </button>
-          <button onClick={handleDownloadInvoice} style={styles.actionBtn}>
-            <FaDownload /> Invoice
-          </button>
         </div>
       </div>
 
+      {/* Order Summary */}
       <div style={styles.orderSummary}>
         <div style={styles.orderIdSection}>
-          <h1 style={styles.orderTitle}>Order #{order.order_id || orderId}</h1>
+          <h1 style={styles.orderTitle}>Order #{order.order_id}</h1>
           <span style={{
             ...styles.statusBadge,
             background: `${getStatusColor(order.status)}20`,
-            color: getStatusColor(order.status),
-            border: `1px solid ${getStatusColor(order.status)}40`
+            color: getStatusColor(order.status)
           }}>
             {order.status?.toUpperCase() || 'PENDING'}
           </span>
@@ -179,57 +163,58 @@ const OrderTracking = () => {
         
         <div style={styles.orderMeta}>
           <div style={styles.metaItem}>
-            <FaClock /> <span>Placed on: {new Date(order.created_at).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</span>
+            <FaClock /> <span>Placed on: {new Date(order.created_at).toLocaleDateString()}</span>
           </div>
           {estimatedDelivery && (
             <div style={styles.metaItem}>
-              <FaTruck /> <span>Estimated Delivery: {estimatedDelivery.min.toLocaleDateString()} - {estimatedDelivery.max.toLocaleDateString()}</span>
+              <FaTruck /> <span>Est. Delivery: {estimatedDelivery.min.toLocaleDateString()} - {estimatedDelivery.max.toLocaleDateString()}</span>
             </div>
           )}
           <div style={styles.metaItem}>
-            <FaMapMarkerAlt /> <span>Shipping to: {order.address || 'Not specified'}</span>
+            <FaMapMarkerAlt /> <span>Shipping to: {order.address}</span>
           </div>
         </div>
       </div>
 
       {/* Status Timeline */}
       <div style={styles.timelineContainer}>
-        <div style={styles.timelineProgress}>
-          <div style={{ ...styles.progressLine, width: `${(currentStep / (statusSteps.length - 1)) * 100}%` }} />
-        </div>
-        <div style={styles.timelineSteps}>
-          {statusSteps.map((step, index) => {
-            const Icon = step.icon;
-            const isCompleted = index <= currentStep;
-            const isCurrent = index === currentStep;
-            
-            return (
-              <div key={step.key} style={{ ...styles.timelineStep, opacity: isCompleted ? 1 : 0.5 }}>
-                <div style={{
-                  ...styles.stepIcon,
-                  ...(isCompleted && { borderColor: '#10b981', background: '#10b981', color: 'white' }),
-                  ...(isCurrent && { transform: 'scale(1.1)', boxShadow: '0 0 0 4px rgba(16, 185, 129, 0.2)' })
-                }}>
-                  <Icon />
-                </div>
-                <div style={styles.stepContent}>
-                  <h4 style={styles.stepTitle}>{step.label}</h4>
-                  <p style={styles.stepDesc}>{step.description}</p>
-                </div>
+        {statusSteps.map((step, index) => {
+          const Icon = step.icon;
+          const isCompleted = step.completed;
+          const isCurrent = order.status === step.key;
+          
+          return (
+            <div key={step.key} style={styles.timelineStep}>
+              <div style={{
+                ...styles.stepIcon,
+                background: isCompleted ? '#10b981' : '#e5e7eb',
+                borderColor: isCompleted ? '#10b981' : '#d1d5db',
+                color: isCompleted ? 'white' : '#6b7280'
+              }}>
+                <Icon />
               </div>
-            );
-          })}
-        </div>
+              <div style={styles.stepContent}>
+                <h4 style={{ ...styles.stepTitle, color: isCompleted ? '#10b981' : '#6b7280' }}>
+                  {step.label}
+                </h4>
+                {isCurrent && (
+                  <span style={styles.currentStep}>Current</span>
+                )}
+              </div>
+              {index < statusSteps.length - 1 && (
+                <div style={{
+                  ...styles.timelineLine,
+                  background: isCompleted ? '#10b981' : '#e5e7eb'
+                }} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Order Details */}
       <div style={styles.orderDetailsGrid}>
+        {/* Items Section */}
         <div style={styles.itemsSection}>
           <h3 style={styles.sectionTitle}>Order Items</h3>
           <div style={styles.itemsList}>
@@ -247,8 +232,13 @@ const OrderTracking = () => {
               </div>
             ))}
           </div>
+          <div style={styles.orderTotal}>
+            <span>Total</span>
+            <span>₹{order.total}</span>
+          </div>
         </div>
 
+        {/* Info Section */}
         <div style={styles.infoSection}>
           <div style={styles.paymentInfo}>
             <h3 style={styles.sectionTitle}>Payment Information</h3>
@@ -256,9 +246,11 @@ const OrderTracking = () => {
               <span>Payment Method:</span>
               <span>{order.payment_method === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</span>
             </div>
-            <div style={{ ...styles.infoRow, ...styles.totalRow }}>
-              <span>Total Amount:</span>
-              <span>₹{order.total}</span>
+            <div style={styles.infoRow}>
+              <span>Payment Status:</span>
+              <span style={{ color: order.payment_method === 'cod' ? '#f59e0b' : '#10b981' }}>
+                {order.payment_method === 'cod' ? 'Pending' : 'Paid'}
+              </span>
             </div>
           </div>
 
@@ -267,10 +259,24 @@ const OrderTracking = () => {
             <div style={styles.addressDetails}>
               <p><strong>{order.name}</strong></p>
               <p>{order.address}</p>
-              <p>{order.phone && <><FaPhoneAlt /> {order.phone}</>}</p>
-              <p>{order.email && <><FaEnvelope /> {order.email}</>}</p>
+              <p><FaPhoneAlt /> {order.phone}</p>
+              <p><FaEnvelope /> {order.email}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Help Section */}
+      <div style={styles.helpSection}>
+        <h3>Need Help?</h3>
+        <p>If you have any questions about your order, our support team is here to help!</p>
+        <div style={styles.helpButtons}>
+          <button style={styles.helpBtn} onClick={() => window.location.href = 'mailto:support@harvestify.com'}>
+            <FaEnvelope /> Email Support
+          </button>
+          <button style={styles.helpBtn} onClick={() => navigate('/')}>
+            Return to Home
+          </button>
         </div>
       </div>
     </div>
@@ -278,7 +284,7 @@ const OrderTracking = () => {
 };
 
 const styles = {
-  container: { maxWidth: '1200px', margin: '0 auto', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  container: { maxWidth: '1000px', margin: '0 auto', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
   loadingSpinner: { textAlign: 'center', padding: '4rem' },
   spinner: { width: '40px', height: '40px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem', display: 'block' },
   errorContainer: { textAlign: 'center', padding: '4rem' },
@@ -288,43 +294,44 @@ const styles = {
   backBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1rem' },
   headerActions: { display: 'flex', gap: '0.5rem' },
   actionBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f5f5f5', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.875rem' },
-  orderSummary: { background: 'linear-gradient(135deg, #f8f9fa, #fff)', borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '1px solid #e9ecef' },
+  orderSummary: { background: '#fff', borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem', border: '1px solid #e9ecef' },
   orderIdSection: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' },
-  orderTitle: { fontSize: '1.5rem', fontWeight: '600', color: '#1e293b', margin: 0 },
-  statusBadge: { padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' },
+  orderTitle: { fontSize: '1.25rem', fontWeight: '600', color: '#1e293b', margin: 0 },
+  statusBadge: { padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600' },
   orderMeta: { display: 'flex', flexWrap: 'wrap', gap: '1.5rem' },
   metaItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#64748b' },
-  timelineContainer: { position: 'relative', marginBottom: '3rem', padding: '1rem 0' },
-  timelineProgress: { position: 'relative', height: '4px', background: '#e2e8f0', borderRadius: '2px', margin: '0 2rem' },
-  progressLine: { position: 'absolute', height: '100%', background: 'linear-gradient(90deg, #10b981, #22c55e)', borderRadius: '2px', transition: 'width 0.5s ease' },
-  timelineSteps: { display: 'flex', justifyContent: 'space-between', marginTop: '2rem', flexWrap: 'wrap' },
-  timelineStep: { flex: 1, textAlign: 'center', minWidth: '100px', transition: 'all 0.3s' },
-  stepIcon: { width: '48px', height: '48px', background: 'white', border: '2px solid #e2e8f0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.25rem', transition: 'all 0.3s' },
+  timelineContainer: { display: 'flex', justifyContent: 'space-between', marginBottom: '3rem', position: 'relative' },
+  timelineStep: { flex: 1, textAlign: 'center', position: 'relative' },
+  stepIcon: { width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem', fontSize: '1.25rem', transition: 'all 0.3s' },
   stepContent: { textAlign: 'center' },
-  stepTitle: { margin: '0 0 0.25rem', fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' },
-  stepDesc: { margin: 0, fontSize: '0.75rem', color: '#64748b', display: 'none' },
+  stepTitle: { margin: 0, fontSize: '0.875rem', fontWeight: '600' },
+  currentStep: { fontSize: '0.7rem', color: '#10b981', marginTop: '0.25rem', display: 'block' },
+  timelineLine: { position: 'absolute', top: '24px', left: '50%', width: 'calc(100% - 48px)', height: '2px', zIndex: 0 },
   orderDetailsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' },
   itemsSection: { background: 'white', borderRadius: '16px', border: '1px solid #e9ecef', overflow: 'hidden' },
   sectionTitle: { padding: '1rem 1.5rem', margin: 0, background: '#f8fafc', borderBottom: '1px solid #e9ecef', fontSize: '1rem', fontWeight: '600' },
   itemsList: { padding: '1rem' },
-  orderItem: { display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid #f0f0f0' },
-  itemImage: { width: '60px', height: '60px', background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' },
+  orderItem: { display: 'flex', gap: '1rem', padding: '0.75rem', borderBottom: '1px solid #f0f0f0' },
+  itemImage: { width: '50px', height: '50px', background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' },
   itemDetails: { flex: 1 },
   itemName: { margin: '0 0 0.25rem', fontSize: '0.875rem', fontWeight: '600' },
   itemTotal: { fontWeight: '600', color: '#10b981' },
+  orderTotal: { display: 'flex', justifyContent: 'space-between', padding: '1rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e9ecef', fontWeight: '700', fontSize: '1rem' },
   infoSection: { display: 'flex', flexDirection: 'column', gap: '1rem' },
   paymentInfo: { background: 'white', borderRadius: '16px', border: '1px solid #e9ecef', overflow: 'hidden' },
   shippingInfo: { background: 'white', borderRadius: '16px', border: '1px solid #e9ecef', overflow: 'hidden' },
   infoRow: { display: 'flex', justifyContent: 'space-between', padding: '0.75rem 1.5rem', borderBottom: '1px solid #f0f0f0' },
-  totalRow: { fontWeight: '700', color: '#10b981', fontSize: '1.125rem' },
-  addressDetails: { padding: '1rem 1.5rem', lineHeight: '1.6', fontSize: '0.875rem', color: '#334155' }
+  addressDetails: { padding: '1rem 1.5rem', lineHeight: '1.8', fontSize: '0.875rem', color: '#334155' },
+  helpSection: { background: '#f8fafc', borderRadius: '16px', padding: '1.5rem', textAlign: 'center', border: '1px solid #e9ecef' },
+  helpButtons: { display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1rem' },
+  helpBtn: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer' }
 };
 
 // Add keyframes
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  @media (max-width: 768px) { div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; } .stepDesc { display: none; } }
+  @media (max-width: 768px) { .order-details-grid { grid-template-columns: 1fr !important; } }
 `;
 document.head.appendChild(styleSheet);
 
