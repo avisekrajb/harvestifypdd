@@ -44,8 +44,8 @@ const LoginModal = ({ onClose, onSwitch }) => {
 
   const handleAutoFillUser = () => {
     setFormData({
-      email: 'user@example.com',
-      password: 'user123'
+      email: 'engineerrajbanshi@gmail.com',
+      password: '789456'
     })
   }
 
