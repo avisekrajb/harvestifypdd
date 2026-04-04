@@ -208,14 +208,14 @@ const DiseaseDetection = () => {
                 <FaBug className="me-3" />
                 AI Plant Disease Detection
               </h1>
-              <p className="text-muted lead">Powered by Google Gemini AI - Upload a plant leaf image for instant analysis</p>
+              <p className="text-muted lead"> Upload a plant leaf image for instant analysis</p>
             </div>
 
             <div className="supported-plants">
               <h5><FaInfoCircle className="me-2" /> How it works</h5>
               <div className="plant-badges">
                 <span className="plant-badge"><FaSeedling /> Upload clear leaf image</span>
-                <span className="plant-badge"><FaChartLine /> AI analyzes with Gemini</span>
+                <span className="plant-badge"><FaChartLine /> AI analyzes with your trained model</span>
                 <span className="plant-badge"><FaFlask /> Get treatment recommendations</span>
               </div>
             </div>
@@ -251,7 +251,7 @@ const DiseaseDetection = () => {
                 {loading && (
                   <div className="text-center">
                     <FaSpinner className="spinner-icon" />
-                    <p className="mt-2 text-success fw-bold">Analyzing with Gemini AI...</p>
+                    <p className="mt-2 text-success fw-bold">Analyzing with your trained model...</p>
                   </div>
                 )}
                 
@@ -302,7 +302,7 @@ const DiseaseDetection = () => {
                     <div className="gemini-header">
                       <FaFlask className="gemini-icon" />
                       <h5>Treatment Plan</h5>
-                      <span className="gemini-badge">Powered by Google Gemini AI</span>
+                      <span className="gemini-badge">powered by batch-6 </span>
                     </div>
                     <div className="treatment-content">
                       {(() => {
