@@ -526,10 +526,33 @@ const Admin = () => {
                   <div className="recent-orders">
                     <h3>Recent Orders</h3>
                     <div className="table-responsive">
-                      <table className="admin-table"><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Amount</th><th>Status</th></tr></thead><tbody>
-                        {orders.slice(0, 5).map(order => (<tr key={order._id || order.id} onClick={() => setShowOrderDetail(order)} style={{ cursor: 'pointer' }}><td>#{order.order_id}</td><td>{order.name}</td><td>{order.phone || '—'}</td><td>₹{(order.total || 0).toLocaleString()}</td><td>{getStatusBadge(order.status)}</td><tr>))}
-                        {orders.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center' }}>No orders found</td></tr>}
-                      </tbody></table>
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orders.slice(0, 5).map(order => (
+                            <tr key={order._id || order.id} onClick={() => setShowOrderDetail(order)} style={{ cursor: 'pointer' }}>
+                              <td>#{order.order_id}</td>
+                              <td>{order.name}</td>
+                              <td>{order.phone || '—'}</td>
+                              <td>₹{(order.total || 0).toLocaleString()}</td>
+                              <td>{getStatusBadge(order.status)}</td>
+                            </tr>
+                          ))}
+                          {orders.length === 0 && (
+                            <tr>
+                              <td colSpan="5" style={{ textAlign: 'center' }}>No orders found</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </>
@@ -539,14 +562,61 @@ const Admin = () => {
               {activeTab === 'orders' && (
                 <div className="orders-table-container">
                   <h2>All Orders</h2>
-                  <div className="table-responsive"><table className="admin-table"><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Email</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Assign Doctor</th><th>Action</th></tr></thead><tbody>
-                    {orders.length === 0 ? <tr><td colSpan="10" style={{ textAlign: 'center' }}>No orders found</td></tr> : orders.map(order => {
-                      const orderId = order._id || order.id
-                      return (<tr key={orderId}><td>#{order.order_id}</td><td>{order.name}</td><td><FaPhone /> {order.phone || '—'}</td><td>{order.email}</td><td>{order.items?.length || 0} items</td><td>₹{(order.total || 0).toLocaleString()}</td><td>{order.payment_method === 'cod' ? 'COD' : 'Online'}</td><td>{getStatusBadge(order.status)}</td>
-                      <td><select value={order.assigned_doctor || ''} onChange={(e) => handleAssignDoctor(orderId, e.target.value)} className="doctor-select"><option value="">None</option>{doctors.map(doc => (<option key={doc._id || doc.id} value={doc.name}>{doc.name}</option>))}</select></td>
-                      <td><select value={order.status} onChange={(e) => handleStatusUpdate(orderId, e.target.value)} className="status-select"><option value="pending">Pending</option><option value="processing">Processing</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></td></tr>)
-                    })}
-                  </tbody></table></div>
+                  <div className="table-responsive">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Order ID</th>
+                          <th>Customer</th>
+                          <th>Phone</th>
+                          <th>Email</th>
+                          <th>Items</th>
+                          <th>Total</th>
+                          <th>Payment</th>
+                          <th>Status</th>
+                          <th>Assign Doctor</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.length === 0 ? (
+                          <tr>
+                            <td colSpan="10" style={{ textAlign: 'center' }}>No orders found</td>
+                          </tr>
+                        ) : (
+                          orders.map(order => {
+                            const orderId = order._id || order.id
+                            return (
+                              <tr key={orderId}>
+                                <td>#{order.order_id}</td>
+                                <td>{order.name}</td>
+                                <td><FaPhone /> {order.phone || '—'}</td>
+                                <td>{order.email}</td>
+                                <td>{order.items?.length || 0} items</td>
+                                <td>₹{(order.total || 0).toLocaleString()}</td>
+                                <td>{order.payment_method === 'cod' ? 'COD' : 'Online'}</td>
+                                <td>{getStatusBadge(order.status)}</td>
+                                <td>
+                                  <select value={order.assigned_doctor || ''} onChange={(e) => handleAssignDoctor(orderId, e.target.value)} className="doctor-select">
+                                    <option value="">None</option>
+                                    {doctors.map(doc => (<option key={doc._id || doc.id} value={doc.name}>{doc.name}</option>))}
+                                  </select>
+                                </td>
+                                <td>
+                                  <select value={order.status} onChange={(e) => handleStatusUpdate(orderId, e.target.value)} className="status-select">
+                                    <option value="pending">Pending</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="cancelled">Cancelled</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -554,9 +624,38 @@ const Admin = () => {
               {activeTab === 'users' && (
                 <div className="users-table-container">
                   <h2>All Users</h2>
-                  <div className="table-responsive"><table className="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Role</th><th>Joined</th></tr></thead><tbody>
-                    {users.length === 0 ? <tr><td colSpan="6" style={{ textAlign: 'center' }}>No users found</td></tr> : users.map(user => (<tr key={user._id || user.id}><td><FaUser /> {user.name}</td><td>{user.email}</td><td>{user.phone || '—'}</td><td>{user.address || '—'}</td><td><span className={`role-badge ${user.role}`}>{user.role || 'user'}</span></td><td><FaCalendar /> {new Date(user.created_at).toLocaleDateString()}</td></tr>))}
-                  </tbody></table></div>
+                  <div className="table-responsive">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Address</th>
+                          <th>Role</th>
+                          <th>Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" style={{ textAlign: 'center' }}>No users found</td>
+                          </tr>
+                        ) : (
+                          users.map(user => (
+                            <tr key={user._id || user.id}>
+                              <td><FaUser /> {user.name}</td>
+                              <td>{user.email}</td>
+                              <td>{user.phone || '—'}</td>
+                              <td>{user.address || '—'}</td>
+                              <td><span className={`role-badge ${user.role}`}>{user.role || 'user'}</span></td>
+                              <td><FaCalendar /> {new Date(user.created_at).toLocaleDateString()}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
 
@@ -565,8 +664,22 @@ const Admin = () => {
                 <div className="products-container">
                   <div className="products-header"><h2>Products</h2><button className="add-product-btn" onClick={() => setShowAddProduct(true)}><FaPlus /> Add Product</button></div>
                   <div className="products-grid-admin">
-                    {products.map(product => (<div key={product._id || product.id} className="product-card-admin"><div className="product-image">{product.photo ? <img src={getImageUrl(product.photo)} alt={product.name} /> : <div className="product-emoji">{product.image || '🌱'}</div>}</div>
-                    <div className="product-info"><h4>{product.name}</h4><p className="product-price">₹{product.price}</p><p className="product-original">₹{product.original_price}</p><span className="stock-badge">Stock: {product.stock || 100}</span><div className="product-actions"><button className="delete-btn" onClick={() => handleDeleteProduct(product._id || product.id)}><FaTrash /> Delete</button></div></div></div>))}
+                    {products.map(product => (
+                      <div key={product._id || product.id} className="product-card-admin">
+                        <div className="product-image">
+                          {product.photo ? <img src={getImageUrl(product.photo)} alt={product.name} /> : <div className="product-emoji">{product.image || '🌱'}</div>}
+                        </div>
+                        <div className="product-info">
+                          <h4>{product.name}</h4>
+                          <p className="product-price">₹{product.price}</p>
+                          <p className="product-original">₹{product.original_price}</p>
+                          <span className="stock-badge">Stock: {product.stock || 100}</span>
+                          <div className="product-actions">
+                            <button className="delete-btn" onClick={() => handleDeleteProduct(product._id || product.id)}><FaTrash /> Delete</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -576,7 +689,20 @@ const Admin = () => {
                 <div className="doctors-container">
                   <div className="products-header"><h2>Agronomists & Doctors</h2><button className="add-product-btn" onClick={() => setShowAddDoctor(true)}><FaPlus /> Add Doctor</button></div>
                   <div className="doctors-grid">
-                    {doctors && doctors.length > 0 ? doctors.map(doctor => (<div key={doctor._id || doctor.id} className="doctor-card"><div className="doctor-icon"><FaStethoscope /></div><div className="doctor-info"><h4>{doctor.name}</h4><p>{doctor.speciality}</p><div className="doctor-contact"><span><FaPhone /> {doctor.phone || '—'}</span><span><FaEnvelope /> {doctor.email || '—'}</span></div></div><button className="delete-doctor-btn" onClick={() => handleDeleteDoctor(doctor._id || doctor.id)}><FaTrash /></button></div>)) : <div className="empty-state"><p>No doctors added yet</p></div>}
+                    {doctors && doctors.length > 0 ? doctors.map(doctor => (
+                      <div key={doctor._id || doctor.id} className="doctor-card">
+                        <div className="doctor-icon"><FaStethoscope /></div>
+                        <div className="doctor-info">
+                          <h4>{doctor.name}</h4>
+                          <p>{doctor.speciality}</p>
+                          <div className="doctor-contact">
+                            <span><FaPhone /> {doctor.phone || '—'}</span>
+                            <span><FaEnvelope /> {doctor.email || '—'}</span>
+                          </div>
+                        </div>
+                        <button className="delete-doctor-btn" onClick={() => handleDeleteDoctor(doctor._id || doctor.id)}><FaTrash /></button>
+                      </div>
+                    )) : <div className="empty-state"><p>No doctors added yet</p></div>}
                   </div>
                 </div>
               )}
@@ -586,7 +712,23 @@ const Admin = () => {
                 <div className="messages-container">
                   <h2>Contact Messages</h2>
                   <div className="messages-list">
-                    {messages && messages.length > 0 ? messages.map(message => (<div key={message._id || message.id} className={`message-card ${!message.read ? 'unread' : ''}`}><div className="message-header"><div className="message-sender"><strong>{message.name}</strong><span>{message.email}</span></div><div className="message-date"><FaCalendar /> {new Date(message.created_at).toLocaleString()}</div></div><div className="message-body"><p>{message.message}</p></div>{!message.read && <button className="mark-read-btn" onClick={() => handleMarkMessageRead(message._id || message.id)}><FaCheck /> Mark as Read</button>}</div>)) : <div className="empty-state"><p>No messages yet</p></div>}
+                    {messages && messages.length > 0 ? messages.map(message => (
+                      <div key={message._id || message.id} className={`message-card ${!message.read ? 'unread' : ''}`}>
+                        <div className="message-header">
+                          <div className="message-sender">
+                            <strong>{message.name}</strong>
+                            <span>{message.email}</span>
+                          </div>
+                          <div className="message-date">
+                            <FaCalendar /> {new Date(message.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="message-body">
+                          <p>{message.message}</p>
+                        </div>
+                        {!message.read && <button className="mark-read-btn" onClick={() => handleMarkMessageRead(message._id || message.id)}><FaCheck /> Mark as Read</button>}
+                      </div>
+                    )) : <div className="empty-state"><p>No messages yet</p></div>}
                   </div>
                 </div>
               )}
@@ -609,7 +751,15 @@ const Admin = () => {
                     <div className="table-responsive">
                       <table className="admin-table">
                         <thead>
-                          <tr><th>Image</th><th>User</th><th>Disease</th><th>Plant</th><th>Confidence</th><th>Date</th><th>Action</th></tr>
+                          <tr>
+                            <th>Image</th>
+                            <th>User</th>
+                            <th>Disease</th>
+                            <th>Plant</th>
+                            <th>Confidence</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                          </tr>
                         </thead>
                         <tbody>
                           {diseaseHistory.map(item => (
