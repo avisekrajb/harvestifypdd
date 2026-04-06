@@ -557,3 +557,148 @@ def upload_photo():
     except Exception as e:
         logger.error(f"Error uploading photo: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+
+
+
+@bp.route('/disease-history', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_disease_history():
+    """Get all disease detection history for admin view"""
+    try:
+        # Get current user to verify admin role
+        user_id = get_jwt_identity()
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Access denied. Admin only.'}), 403
+        
+        # Get all disease history with user details
+        pipeline = [
+            {
+                '$lookup': {
+                    'from': 'users',
+                    'localField': 'user_id',
+                    'foreignField': '_id',
+                    'as': 'user_info'
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$user_info',
+                    'preserveNullAndEmptyArrays': True
+                }
+            },
+            {
+                '$sort': {'created_at': -1}
+            }
+        ]
+        
+        disease_history = list(db.disease_history.aggregate(pipeline))
+        
+        # Format the response
+        formatted_history = []
+        for item in disease_history:
+            formatted_item = {
+                '_id': str(item['_id']),
+                'image_url': item.get('image_url'),
+                'filename': item.get('filename'),
+                'disease': item.get('disease'),
+                'confidence': item.get('confidence'),
+                'plant_name': item.get('plant_name'),
+                'created_at': item.get('created_at'),
+                'user': {
+                    'id': str(item['user_info']['_id']) if item.get('user_info') else None,
+                    'name': item['user_info'].get('name') if item.get('user_info') else 'Unknown',
+                    'email': item['user_info'].get('email') if item.get('user_info') else 'Unknown'
+                } if item.get('user_info') else None
+            }
+            formatted_history.append(formatted_item)
+        
+        # Get statistics
+        total_detections = db.disease_history.count_documents({})
+        unique_users = len(db.disease_history.distinct('user_id'))
+        
+        # Get disease statistics
+        disease_stats = list(db.disease_history.aggregate([
+            {'$group': {'_id': '$disease', 'count': {'$sum': 1}}},
+            {'$sort': {'count': -1}},
+            {'$limit': 10}
+        ]))
+        
+        return jsonify({
+            'history': formatted_history,
+            'stats': {
+                'total_detections': total_detections,
+                'unique_users': unique_users,
+                'top_diseases': [{'disease': d['_id'], 'count': d['count']} for d in disease_stats]
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching disease history: {e}")
+        return jsonify({'error': str(e), 'history': []}), 500
+
+@bp.route('/disease-history/<history_id>', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_disease_history_detail(history_id):
+    """Get specific disease detection detail for admin"""
+    try:
+        # Get current user to verify admin role
+        user_id = get_jwt_identity()
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Access denied. Admin only.'}), 403
+        
+        # Get disease history with user details
+        pipeline = [
+            {
+                '$match': {'_id': ObjectId(history_id)}
+            },
+            {
+                '$lookup': {
+                    'from': 'users',
+                    'localField': 'user_id',
+                    'foreignField': '_id',
+                    'as': 'user_info'
+                }
+            },
+            {
+                '$unwind': {
+                    'path': '$user_info',
+                    'preserveNullAndEmptyArrays': True
+                }
+            }
+        ]
+        
+        result = list(db.disease_history.aggregate(pipeline))
+        
+        if not result:
+            return jsonify({'error': 'History not found'}), 404
+        
+        item = result[0]
+        
+        formatted_item = {
+            '_id': str(item['_id']),
+            'image_url': item.get('image_url'),
+            'public_id': item.get('public_id'),
+            'filename': item.get('filename'),
+            'disease': item.get('disease'),
+            'confidence': item.get('confidence'),
+            'plant_name': item.get('plant_name'),
+            'gemini_response': item.get('gemini_response'),
+            'created_at': item.get('created_at'),
+            'user': {
+                'id': str(item['user_info']['_id']) if item.get('user_info') else None,
+                'name': item['user_info'].get('name') if item.get('user_info') else 'Unknown',
+                'email': item['user_info'].get('email') if item.get('user_info') else 'Unknown'
+            } if item.get('user_info') else None
+        }
+        
+        return jsonify(formatted_item)
+        
+    except Exception as e:
+        logger.error(f"Error fetching disease history detail: {e}")
+        return jsonify({'error': str(e)}), 500
