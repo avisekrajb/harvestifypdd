@@ -265,26 +265,35 @@ const Admin = () => {
     }
   }
 
+// In your Admin.jsx, update the handleStatusUpdate function:
 const handleStatusUpdate = async (orderId, status) => {
-  console.log('🔄 Status Update - Order ID:', orderId, 'Status:', status)
+  console.log('🔄 Status Update Called')
+  console.log('Order ID:', orderId, 'Type:', typeof orderId)
+  console.log('Status:', status)
   
   if (!orderId) {
     toast.error('Order ID is missing')
     return
   }
   
+  // Show loading toast
+  const loadingToast = toast.loading('Updating order status...')
+  
   try {
     const result = await updateOrderStatus(orderId, status)
     console.log('✅ Status update result:', result)
-    toast.success('Order status updated successfully!')
+    toast.success('Order status updated successfully!', { id: loadingToast })
     fetchDashboardData() // Refresh the data
   } catch (error) {
     console.error('❌ Status update error:', error)
-    console.error('Error response:', error.response?.data)
-    toast.error(error.response?.data?.error || 'Failed to update status')
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    })
+    toast.error(error.response?.data?.error || 'Failed to update status', { id: loadingToast })
   }
 }
-
 const handleAssignDoctor = async (orderId, doctorName) => {
   console.log('👨‍⚕️ Assign Doctor - Order ID:', orderId, 'Doctor:', doctorName)
   
