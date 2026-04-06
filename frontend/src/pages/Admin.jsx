@@ -1,4 +1,4 @@
-//import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { 
   getAdminStats, 
@@ -15,11 +15,12 @@ import {
   markMessageRead,
   uploadProductPhoto
 } from '../services/api'
+import api from '../services/api'
 import { 
   FaUsers, FaShoppingBag, FaProductHunt, FaMoneyBillWave, 
   FaClock, FaChartLine, FaBox, FaUser, FaTrash, FaPlus, 
   FaTimes, FaCheck, FaEnvelope, FaPhone, FaCalendar, 
-  FaStethoscope, FaImage, FaUpload, FaEye, FaBug, FaFlask
+  FaStethoscope, FaImage, FaUpload, FaEye, FaBug
 } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -65,6 +66,14 @@ const Admin = () => {
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [showAddDoctor, setShowAddDoctor] = useState(false)
   const [showOrderDetail, setShowOrderDetail] = useState(null)
+  
+  // Disease history states
+  const [diseaseHistory, setDiseaseHistory] = useState([])
+  const [diseaseHistoryLoading, setDiseaseHistoryLoading] = useState(false)
+  const [diseaseStats, setDiseaseStats] = useState({})
+  const [selectedDiseaseDetail, setSelectedDiseaseDetail] = useState(null)
+  const [showDiseaseModal, setShowDiseaseModal] = useState(false)
+  
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
@@ -85,13 +94,6 @@ const Admin = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef()
 
-  // Disease History state variables
-  const [diseaseHistory, setDiseaseHistory] = useState([]);
-  const [diseaseHistoryLoading, setDiseaseHistoryLoading] = useState(false);
-  const [diseaseStats, setDiseaseStats] = useState({});
-  const [selectedDiseaseDetail, setSelectedDiseaseDetail] = useState(null);
-  const [showDiseaseModal, setShowDiseaseModal] = useState(false);
-
   // Analytics data
   const [orderStats, setOrderStats] = useState({
     monthlyOrders: [],
@@ -107,58 +109,29 @@ const Admin = () => {
     return `http://localhost:5000/${photo}`
   }
 
-  // Helper function to get plant icon based on disease
-  const getPlantIcon = (disease) => {
-    const diseaseLower = disease?.toLowerCase() || '';
-    if (diseaseLower.includes('potato')) return '🥔';
-    if (diseaseLower.includes('tomato')) return '🍅';
-    if (diseaseLower.includes('apple')) return '🍎';
-    if (diseaseLower.includes('grape')) return '🍇';
-    if (diseaseLower.includes('wheat')) return '🌾';
-    if (diseaseLower.includes('rice')) return '🍚';
-    if (diseaseLower.includes('corn') || diseaseLower.includes('maize')) return '🌽';
-    return '🌿';
-  }
-
-  // Helper function to get confidence class
+  // Helper function for confidence class
   const getConfidenceClass = (confidence) => {
-    if (confidence >= 90) return 'high';
-    if (confidence >= 70) return 'medium';
-    return 'low';
+    if (confidence >= 70) return 'confidence-high'
+    if (confidence >= 40) return 'confidence-medium'
+    return 'confidence-low'
   }
 
-  // Fetch disease history function
-  const fetchDiseaseHistory = async () => {
-    setDiseaseHistoryLoading(true);
-    try {
-      const response = await api.get('/admin/disease-history');
-      setDiseaseHistory(response.data.history || []);
-      setDiseaseStats(response.data.stats || {});
-    } catch (error) {
-      console.error('Error fetching disease history:', error);
-      toast.error('Failed to load disease history');
-    } finally {
-      setDiseaseHistoryLoading(false);
-    }
-  };
-
-  const viewDiseaseDetail = async (id) => {
-    try {
-      const response = await api.get(`/admin/disease-history/${id}`);
-      setSelectedDiseaseDetail(response.data);
-      setShowDiseaseModal(true);
-    } catch (error) {
-      toast.error('Failed to load details');
-    }
-  };
+  // Helper function for plant icon
+  const getPlantIcon = (disease) => {
+    const lowerDisease = disease?.toLowerCase() || ''
+    if (lowerDisease.includes('corn')) return '🌽'
+    if (lowerDisease.includes('potato')) return '🥔'
+    if (lowerDisease.includes('tomato')) return '🍅'
+    if (lowerDisease.includes('rice')) return '🌾'
+    if (lowerDisease.includes('wheat')) return '🌾'
+    return '🌱'
+  }
 
   useEffect(() => {
-    // Hide navbar when admin page is mounted
     const navbar = document.querySelector('.navbar')
     if (navbar) {
       navbar.style.display = 'none'
     }
-    
     return () => {
       const navbar = document.querySelector('.navbar')
       if (navbar) {
@@ -172,13 +145,11 @@ const Admin = () => {
       navigate('/?login=true')
       return
     }
-    
     if (user.role !== 'admin') {
       toast.error('Admin access required')
       navigate('/')
       return
     }
-    
     fetchDashboardData()
   }, [user, navigate, activeTab])
 
@@ -187,13 +158,6 @@ const Admin = () => {
       calculateAnalytics()
     }
   }, [orders, products])
-
-  // Fetch disease history when tab changes to disease-history
-  useEffect(() => {
-    if (activeTab === 'disease-history') {
-      fetchDiseaseHistory();
-    }
-  }, [activeTab]);
 
   const calculateAnalytics = () => {
     const monthlyData = {}
@@ -204,7 +168,6 @@ const Admin = () => {
         monthlyData[monthYear] = (monthlyData[monthYear] || 0) + 1
       }
     })
-    
     const monthlyOrders = Object.entries(monthlyData).map(([month, count]) => ({
       month,
       count
@@ -214,7 +177,6 @@ const Admin = () => {
     products.forEach(product => {
       categoryData[product.category] = (categoryData[product.category] || 0) + 1
     })
-    
     const categoryDistribution = Object.entries(categoryData).map(([name, value]) => ({
       name: name || 'Other',
       value
@@ -227,7 +189,6 @@ const Admin = () => {
         revenueData[date] = (revenueData[date] || 0) + (order.total || 0)
       }
     })
-    
     const dailyRevenue = Object.entries(revenueData).map(([date, amount]) => ({
       date,
       amount
@@ -263,6 +224,8 @@ const Admin = () => {
       } else if (activeTab === 'messages') {
         const messagesData = await getMessages()
         setMessages(messagesData.messages || [])
+      } else if (activeTab === 'disease-history') {
+        await fetchDiseaseHistory()
       }
     } catch (error) {
       console.error('Error fetching admin data:', error)
@@ -275,6 +238,30 @@ const Admin = () => {
       }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchDiseaseHistory = async () => {
+    setDiseaseHistoryLoading(true)
+    try {
+      const response = await api.get('/admin/disease-history')
+      setDiseaseHistory(response.data.history || [])
+      setDiseaseStats(response.data.stats || {})
+    } catch (error) {
+      console.error('Error fetching disease history:', error)
+      toast.error('Failed to load disease history')
+    } finally {
+      setDiseaseHistoryLoading(false)
+    }
+  }
+
+  const viewDiseaseDetail = async (id) => {
+    try {
+      const response = await api.get(`/admin/disease-history/${id}`)
+      setSelectedDiseaseDetail(response.data)
+      setShowDiseaseModal(true)
+    } catch (error) {
+      toast.error('Failed to load details')
     }
   }
 
@@ -315,7 +302,6 @@ const Admin = () => {
       toast.error('Doctor ID is missing')
       return
     }
-    
     if (window.confirm('Are you sure you want to delete this doctor?')) {
       try {
         await deleteDoctor(doctorId)
@@ -341,12 +327,10 @@ const Admin = () => {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file')
       return
     }
-    
     setUploadingPhoto(true)
     try {
       const result = await uploadProductPhoto(file)
@@ -367,7 +351,6 @@ const Admin = () => {
       toast.error('Please fill required fields')
       return
     }
-    
     try {
       await createProduct({
         ...newProduct,
@@ -402,7 +385,6 @@ const Admin = () => {
       toast.error('Please fill required fields')
       return
     }
-    
     try {
       await createDoctor(newDoctor)
       toast.success('Doctor added successfully')
@@ -426,11 +408,9 @@ const Admin = () => {
       delivered: 'delivered',
       cancelled: 'cancelled'
     }[status] || 'pending'
-    
     return <span className={`status-badge ${statusClass}`}>{status}</span>
   }
 
-  // Chart configurations
   const monthlyOrdersChartData = {
     labels: orderStats.monthlyOrders.map(item => item.month),
     datasets: [{
@@ -502,17 +482,12 @@ const Admin = () => {
             <button className={`nav-item ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}><FaBox /> Products</button>
             <button className={`nav-item ${activeTab === 'doctors' ? 'active' : ''}`} onClick={() => setActiveTab('doctors')}><FaStethoscope /> Doctors</button>
             <button className={`nav-item ${activeTab === 'messages' ? 'active' : ''}`} onClick={() => setActiveTab('messages')}><FaEnvelope /> Messages</button>
-            <button className={`nav-item ${activeTab === 'disease-history' ? 'active' : ''}`} onClick={() => setActiveTab('disease-history')}>
-              <FaBug /> Disease History
-            </button>
+            <button className={`nav-item ${activeTab === 'disease-history' ? 'active' : ''}`} onClick={() => setActiveTab('disease-history')}><FaBug /> Disease History</button>
           </nav>
           <div className="admin-footer">
             <div className="admin-user">
               <div className="admin-user-icon"><FaUser /></div>
-              <div>
-                <div className="admin-user-name">{user?.name}</div>
-                <div className="admin-user-email">{user?.email}</div>
-              </div>
+              <div><div className="admin-user-name">{user?.name}</div><div className="admin-user-email">{user?.email}</div></div>
             </div>
             <button className="logout-btn" onClick={logout}>Sign Out</button>
           </div>
@@ -520,16 +495,10 @@ const Admin = () => {
 
         {/* Main Content */}
         <div className="admin-content">
-          <div className="admin-header">
-            <h1>Welcome back, {user?.name}</h1>
-            <p>Manage your platform from here</p>
-          </div>
+          <div className="admin-header"><h1>Welcome back, {user?.name}</h1><p>Manage your platform from here</p></div>
 
           {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading dashboard...</p>
-            </div>
+            <div className="loading-container"><div className="loading-spinner"></div><p>Loading dashboard...</p></div>
           ) : (
             <>
               {/* Dashboard Tab */}
@@ -557,33 +526,10 @@ const Admin = () => {
                   <div className="recent-orders">
                     <h3>Recent Orders</h3>
                     <div className="table-responsive">
-                      <table className="admin-table">
-                        <thead>
-                          <tr>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Phone</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {orders.slice(0, 5).map(order => (
-                            <tr key={order._id || order.id} onClick={() => setShowOrderDetail(order)} style={{ cursor: 'pointer' }}>
-                              <td>#{order.order_id}</td>
-                              <td>{order.name}</td>
-                              <td>{order.phone || '—'}</td>
-                              <td>₹{(order.total || 0).toLocaleString()}</td>
-                              <td>{getStatusBadge(order.status)}</td>
-                            </tr>
-                          ))}
-                          {orders.length === 0 && (
-                            <tr>
-                              <td colSpan="5" style={{ textAlign: 'center' }}>No orders found</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
+                      <table className="admin-table"><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+                        {orders.slice(0, 5).map(order => (<tr key={order._id || order.id} onClick={() => setShowOrderDetail(order)} style={{ cursor: 'pointer' }}><td>#{order.order_id}</td><td>{order.name}</td><td>{order.phone || '—'}</td><td>₹{(order.total || 0).toLocaleString()}</td><td>{getStatusBadge(order.status)}</td><tr>))}
+                        {orders.length === 0 && <tr><td colSpan="5" style={{ textAlign: 'center' }}>No orders found</td></tr>}
+                      </tbody></table>
                     </div>
                   </div>
                 </>
@@ -593,71 +539,14 @@ const Admin = () => {
               {activeTab === 'orders' && (
                 <div className="orders-table-container">
                   <h2>All Orders</h2>
-                  <div className="table-responsive">
-                    <table className="admin-table">
-                      <thead>
-                        <tr>
-                          <th>Order ID</th>
-                          <th>Customer</th>
-                          <th>Phone</th>
-                          <th>Email</th>
-                          <th>Items</th>
-                          <th>Total</th>
-                          <th>Payment</th>
-                          <th>Status</th>
-                          <th>Assign Doctor</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orders.length === 0 ? (
-                          <tr>
-                            <td colSpan="10" style={{ textAlign: 'center' }}>No orders found</td>
-                          </tr>
-                        ) : (
-                          orders.map(order => {
-                            const orderId = order._id || order.id
-                            return (
-                              <tr key={orderId}>
-                                <td>#{order.order_id}</td>
-                                <td>{order.name}</td>
-                                <td><FaPhone /> {order.phone || '—'}</td>
-                                <td>{order.email}</td>
-                                <td>{order.items?.length || 0} items</td>
-                                <td>₹{(order.total || 0).toLocaleString()}</td>
-                                <td>{order.payment_method === 'cod' ? 'COD' : 'Online'}</td>
-                                <td>{getStatusBadge(order.status)}</td>
-                                <td>
-                                  <select 
-                                    value={order.assigned_doctor || ''} 
-                                    onChange={(e) => handleAssignDoctor(orderId, e.target.value)} 
-                                    className="doctor-select"
-                                  >
-                                    <option value="">None</option>
-                                    {doctors.map(doc => (
-                                      <option key={doc._id || doc.id} value={doc.name}>{doc.name}</option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td>
-                                  <select 
-                                    value={order.status} 
-                                    onChange={(e) => handleStatusUpdate(orderId, e.target.value)} 
-                                    className="status-select"
-                                  >
-                                    <option value="pending">Pending</option>
-                                    <option value="processing">Processing</option>
-                                    <option value="delivered">Delivered</option>
-                                    <option value="cancelled">Cancelled</option>
-                                  </select>
-                                </td>
-                              </tr>
-                            )
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  <div className="table-responsive"><table className="admin-table"><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Email</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Assign Doctor</th><th>Action</th></tr></thead><tbody>
+                    {orders.length === 0 ? <tr><td colSpan="10" style={{ textAlign: 'center' }}>No orders found</td></tr> : orders.map(order => {
+                      const orderId = order._id || order.id
+                      return (<tr key={orderId}><td>#{order.order_id}</td><td>{order.name}</td><td><FaPhone /> {order.phone || '—'}</td><td>{order.email}</td><td>{order.items?.length || 0} items</td><td>₹{(order.total || 0).toLocaleString()}</td><td>{order.payment_method === 'cod' ? 'COD' : 'Online'}</td><td>{getStatusBadge(order.status)}</td>
+                      <td><select value={order.assigned_doctor || ''} onChange={(e) => handleAssignDoctor(orderId, e.target.value)} className="doctor-select"><option value="">None</option>{doctors.map(doc => (<option key={doc._id || doc.id} value={doc.name}>{doc.name}</option>))}</select></td>
+                      <td><select value={order.status} onChange={(e) => handleStatusUpdate(orderId, e.target.value)} className="status-select"><option value="pending">Pending</option><option value="processing">Processing</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></td></tr>)
+                    })}
+                  </tbody></table></div>
                 </div>
               )}
 
@@ -665,73 +554,19 @@ const Admin = () => {
               {activeTab === 'users' && (
                 <div className="users-table-container">
                   <h2>All Users</h2>
-                  <div className="table-responsive">
-                    <table className="admin-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Phone</th>
-                          <th>Address</th>
-                          <th>Role</th>
-                          <th>Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.length === 0 ? (
-                          <tr>
-                            <td colSpan="6" style={{ textAlign: 'center' }}>No users found</td>
-                          </tr>
-                        ) : (
-                          users.map(user => (
-                            <tr key={user._id || user.id}>
-                              <td><FaUser /> {user.name}</td>
-                              <td>{user.email}</td>
-                              <td>{user.phone || '—'}</td>
-                              <td>{user.address || '—'}</td>
-                              <td><span className={`role-badge ${user.role}`}>{user.role || 'user'}</span></td>
-                              <td><FaCalendar /> {new Date(user.created_at).toLocaleDateString()}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  <div className="table-responsive"><table className="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Role</th><th>Joined</th></tr></thead><tbody>
+                    {users.length === 0 ? <tr><td colSpan="6" style={{ textAlign: 'center' }}>No users found</td></tr> : users.map(user => (<tr key={user._id || user.id}><td><FaUser /> {user.name}</td><td>{user.email}</td><td>{user.phone || '—'}</td><td>{user.address || '—'}</td><td><span className={`role-badge ${user.role}`}>{user.role || 'user'}</span></td><td><FaCalendar /> {new Date(user.created_at).toLocaleDateString()}</td></tr>))}
+                  </tbody></table></div>
                 </div>
               )}
 
               {/* Products Tab */}
               {activeTab === 'products' && (
                 <div className="products-container">
-                  <div className="products-header">
-                    <h2>Products</h2>
-                    <button className="add-product-btn" onClick={() => setShowAddProduct(true)}>
-                      <FaPlus /> Add Product
-                    </button>
-                  </div>
+                  <div className="products-header"><h2>Products</h2><button className="add-product-btn" onClick={() => setShowAddProduct(true)}><FaPlus /> Add Product</button></div>
                   <div className="products-grid-admin">
-                    {products.map(product => (
-                      <div key={product._id || product.id} className="product-card-admin">
-                        <div className="product-image">
-                          {product.photo ? (
-                            <img src={getImageUrl(product.photo)} alt={product.name} />
-                          ) : (
-                            <div className="product-emoji">{product.image || '🌱'}</div>
-                          )}
-                        </div>
-                        <div className="product-info">
-                          <h4>{product.name}</h4>
-                          <p className="product-price">₹{product.price}</p>
-                          <p className="product-original">₹{product.original_price}</p>
-                          <span className="stock-badge">Stock: {product.stock || 100}</span>
-                          <div className="product-actions">
-                            <button className="delete-btn" onClick={() => handleDeleteProduct(product._id || product.id)}>
-                              <FaTrash /> Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                    {products.map(product => (<div key={product._id || product.id} className="product-card-admin"><div className="product-image">{product.photo ? <img src={getImageUrl(product.photo)} alt={product.name} /> : <div className="product-emoji">{product.image || '🌱'}</div>}</div>
+                    <div className="product-info"><h4>{product.name}</h4><p className="product-price">₹{product.price}</p><p className="product-original">₹{product.original_price}</p><span className="stock-badge">Stock: {product.stock || 100}</span><div className="product-actions"><button className="delete-btn" onClick={() => handleDeleteProduct(product._id || product.id)}><FaTrash /> Delete</button></div></div></div>))}
                   </div>
                 </div>
               )}
@@ -739,35 +574,9 @@ const Admin = () => {
               {/* Doctors Tab */}
               {activeTab === 'doctors' && (
                 <div className="doctors-container">
-                  <div className="products-header">
-                    <h2>Agronomists & Doctors</h2>
-                    <button className="add-product-btn" onClick={() => setShowAddDoctor(true)}>
-                      <FaPlus /> Add Doctor
-                    </button>
-                  </div>
+                  <div className="products-header"><h2>Agronomists & Doctors</h2><button className="add-product-btn" onClick={() => setShowAddDoctor(true)}><FaPlus /> Add Doctor</button></div>
                   <div className="doctors-grid">
-                    {doctors && doctors.length > 0 ? (
-                      doctors.map(doctor => (
-                        <div key={doctor._id || doctor.id} className="doctor-card">
-                          <div className="doctor-icon"><FaStethoscope /></div>
-                          <div className="doctor-info">
-                            <h4>{doctor.name}</h4>
-                            <p>{doctor.speciality}</p>
-                            <div className="doctor-contact">
-                              <span><FaPhone /> {doctor.phone || '—'}</span>
-                              <span><FaEnvelope /> {doctor.email || '—'}</span>
-                            </div>
-                          </div>
-                          <button className="delete-doctor-btn" onClick={() => handleDeleteDoctor(doctor._id || doctor.id)}>
-                            <FaTrash />
-                          </button>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="empty-state">
-                        <p>No doctors added yet</p>
-                      </div>
-                    )}
+                    {doctors && doctors.length > 0 ? doctors.map(doctor => (<div key={doctor._id || doctor.id} className="doctor-card"><div className="doctor-icon"><FaStethoscope /></div><div className="doctor-info"><h4>{doctor.name}</h4><p>{doctor.speciality}</p><div className="doctor-contact"><span><FaPhone /> {doctor.phone || '—'}</span><span><FaEnvelope /> {doctor.email || '—'}</span></div></div><button className="delete-doctor-btn" onClick={() => handleDeleteDoctor(doctor._id || doctor.id)}><FaTrash /></button></div>)) : <div className="empty-state"><p>No doctors added yet</p></div>}
                   </div>
                 </div>
               )}
@@ -777,33 +586,7 @@ const Admin = () => {
                 <div className="messages-container">
                   <h2>Contact Messages</h2>
                   <div className="messages-list">
-                    {messages && messages.length > 0 ? (
-                      messages.map(message => (
-                        <div key={message._id || message.id} className={`message-card ${!message.read ? 'unread' : ''}`}>
-                          <div className="message-header">
-                            <div className="message-sender">
-                              <strong>{message.name}</strong>
-                              <span>{message.email}</span>
-                            </div>
-                            <div className="message-date">
-                              <FaCalendar /> {new Date(message.created_at).toLocaleString()}
-                            </div>
-                          </div>
-                          <div className="message-body">
-                            <p>{message.message}</p>
-                          </div>
-                          {!message.read && (
-                            <button className="mark-read-btn" onClick={() => handleMarkMessageRead(message._id || message.id)}>
-                              <FaCheck /> Mark as Read
-                            </button>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="empty-state">
-                        <p>No messages yet</p>
-                      </div>
-                    )}
+                    {messages && messages.length > 0 ? messages.map(message => (<div key={message._id || message.id} className={`message-card ${!message.read ? 'unread' : ''}`}><div className="message-header"><div className="message-sender"><strong>{message.name}</strong><span>{message.email}</span></div><div className="message-date"><FaCalendar /> {new Date(message.created_at).toLocaleString()}</div></div><div className="message-body"><p>{message.message}</p></div>{!message.read && <button className="mark-read-btn" onClick={() => handleMarkMessageRead(message._id || message.id)}><FaCheck /> Mark as Read</button>}</div>)) : <div className="empty-state"><p>No messages yet</p></div>}
                   </div>
                 </div>
               )}
@@ -818,62 +601,26 @@ const Admin = () => {
                       <span className="stat-badge">Users: {diseaseStats.unique_users || 0}</span>
                     </div>
                   </div>
-                  
                   {diseaseHistoryLoading ? (
-                    <div className="loading-container">
-                      <div className="loading-spinner"></div>
-                      <p>Loading history...</p>
-                    </div>
+                    <div className="loading-container"><div className="loading-spinner"></div><p>Loading history...</p></div>
                   ) : diseaseHistory.length === 0 ? (
-                    <div className="empty-state">
-                      <FaBug />
-                      <p>No disease detection history yet</p>
-                    </div>
+                    <div className="empty-state"><FaBug /><p>No disease detection history yet</p></div>
                   ) : (
                     <div className="table-responsive">
                       <table className="admin-table">
                         <thead>
-                          <tr>
-                            <th>Image</th>
-                            <th>User</th>
-                            <th>Disease</th>
-                            <th>Plant</th>
-                            <th>Confidence</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                          </tr>
+                          <tr><th>Image</th><th>User</th><th>Disease</th><th>Plant</th><th>Confidence</th><th>Date</th><th>Action</th></tr>
                         </thead>
                         <tbody>
                           {diseaseHistory.map(item => (
                             <tr key={item._id}>
-                              <td>
-                                {item.image_url ? (
-                                  <img src={item.image_url} alt={item.filename} className="history-thumb" />
-                                ) : (
-                                  <div className="no-image">No image</div>
-                                )}
-                              </td>
-                              <td>
-                                <div className="user-info-cell">
-                                  <strong>{item.user?.name || 'Unknown'}</strong>
-                                  <small>{item.user?.email || 'No email'}</small>
-                                </div>
-                              </td>
+                              <td>{item.image_url ? <img src={item.image_url} alt={item.filename} className="history-thumb" /> : <div className="no-image">No image</div>}</td>
+                              <td><div className="user-info-cell"><strong>{item.user?.name || 'Unknown'}</strong><small>{item.user?.email || 'No email'}</small></div></td>
                               <td className="disease-cell">{item.disease}</td>
-                              <td>
-                                <span className="plant-badge-sm">{getPlantIcon(item.disease)} {item.plant_name}</span>
-                              </td>
-                              <td>
-                                <span className={`confidence-badge ${getConfidenceClass(item.confidence)}`}>
-                                  {item.confidence?.toFixed(1)}%
-                                </span>
-                              </td>
+                              <td><span className="plant-badge-sm">{getPlantIcon(item.disease)} {item.plant_name}</span></td>
+                              <td><span className={`confidence-badge ${getConfidenceClass(item.confidence)}`}>{item.confidence?.toFixed(1)}%</span></td>
                               <td><FaCalendar /> {new Date(item.created_at).toLocaleDateString()}</td>
-                              <td>
-                                <button className="view-btn" onClick={() => viewDiseaseDetail(item._id)}>
-                                  <FaEye /> View
-                                </button>
-                              </td>
+                              <td><button className="view-btn" onClick={() => viewDiseaseDetail(item._id)}><FaEye /> View</button></td>
                             </tr>
                           ))}
                         </tbody>
@@ -891,166 +638,12 @@ const Admin = () => {
       {showOrderDetail && (
         <div className="modal-overlay" onClick={() => setShowOrderDetail(null)}>
           <div className="order-detail-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Order Details #{showOrderDetail.order_id}</h3>
-              <button className="close-modal" onClick={() => setShowOrderDetail(null)}>
-                <FaTimes />
-              </button>
-            </div>
+            <div className="modal-header"><h3>Order Details #{showOrderDetail.order_id}</h3><button className="close-modal" onClick={() => setShowOrderDetail(null)}><FaTimes /></button></div>
             <div className="modal-body">
-              <div className="detail-section">
-                <h4>Customer Information</h4>
-                <p><strong>Name:</strong> {showOrderDetail.name}</p>
-                <p><strong>Email:</strong> {showOrderDetail.email}</p>
-                <p><strong>Phone:</strong> {showOrderDetail.phone || '—'}</p>
-                <p><strong>Address:</strong> {showOrderDetail.address || '—'}</p>
-              </div>
-              <div className="detail-section">
-                <h4>Order Information</h4>
-                <p><strong>Order ID:</strong> #{showOrderDetail.order_id}</p>
-                <p><strong>Date:</strong> {new Date(showOrderDetail.created_at).toLocaleString()}</p>
-                <p><strong>Payment Method:</strong> {showOrderDetail.payment_method === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</p>
-                <p><strong>Status:</strong> {getStatusBadge(showOrderDetail.status)}</p>
-              </div>
-              <div className="detail-section">
-                <h4>Items</h4>
-                <table className="items-table">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Quantity</th>
-                      <th>Price</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {showOrderDetail.items?.map((item, idx) => (
-                      <tr key={idx}>
-                        <td>{item.name}</td>
-                        <td>{item.quantity}</td>
-                        <td>₹{item.price}</td>
-                        <td>₹{item.price * item.quantity}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="detail-total">
-                <strong>Total Amount: ₹{(showOrderDetail.total || 0).toLocaleString()}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <div className="modal-overlay" onClick={() => setShowAddProduct(false)}>
-          <div className="product-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add New Product</h3>
-              <button className="close-modal" onClick={() => setShowAddProduct(false)}>
-                <FaTimes />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Product Name *</label>
-                <input type="text" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} placeholder="Enter product name" />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Price (₹) *</label>
-                  <input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: e.target.value})} placeholder="Current price" />
-                </div>
-                <div className="form-group">
-                  <label>Original Price (₹)</label>
-                  <input type="number" value={newProduct.original_price} onChange={(e) => setNewProduct({...newProduct, original_price: e.target.value})} placeholder="Original price" />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Category</label>
-                  <select value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}>
-                    <option value="fertilizer">Fertilizer</option>
-                    <option value="pesticide">Pesticide</option>
-                    <option value="tool">Tool</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Stock</label>
-                  <input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})} placeholder="Stock quantity" />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Product Photo</label>
-                <div className="photo-upload-area" onClick={() => fileInputRef.current.click()}>
-                  <input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                  {uploadingPhoto ? (
-                    <div className="uploading">Uploading...</div>
-                  ) : productPhoto ? (
-                    <div className="photo-preview">
-                      <img src={productPhoto} alt="Preview" onError={(e) => { e.target.src = 'https://picsum.photos/400/400?random=1' }} />
-                      <FaImage />
-                    </div>
-                  ) : (
-                    <div className="upload-placeholder">
-                      <FaUpload />
-                      <p>Click to upload product photo</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <textarea rows="3" value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} placeholder="Product description" />
-              </div>
-              <div className="form-group">
-                <label>Icon/Emoji</label>
-                <input type="text" value={newProduct.image} onChange={(e) => setNewProduct({...newProduct, image: e.target.value})} placeholder="🌱" maxLength="2" />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddProduct(false)}>Cancel</button>
-              <button className="submit-btn" onClick={handleAddProduct}><FaCheck /> Add Product</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Doctor Modal */}
-      {showAddDoctor && (
-        <div className="modal-overlay" onClick={() => setShowAddDoctor(false)}>
-          <div className="product-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Add New Doctor/Agronomist</h3>
-              <button className="close-modal" onClick={() => setShowAddDoctor(false)}>
-                <FaTimes />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input type="text" value={newDoctor.name} onChange={(e) => setNewDoctor({...newDoctor, name: e.target.value})} placeholder="Dr. John Doe" />
-              </div>
-              <div className="form-group">
-                <label>Speciality *</label>
-                <input type="text" value={newDoctor.speciality} onChange={(e) => setNewDoctor({...newDoctor, speciality: e.target.value})} placeholder="Crop Disease Specialist" />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input type="tel" value={newDoctor.phone} onChange={(e) => setNewDoctor({...newDoctor, phone: e.target.value})} placeholder="9876543210" />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input type="email" value={newDoctor.email} onChange={(e) => setNewDoctor({...newDoctor, email: e.target.value})} placeholder="doctor@example.com" />
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddDoctor(false)}>Cancel</button>
-              <button className="submit-btn" onClick={handleAddDoctor}><FaCheck /> Add Doctor</button>
+              <div className="detail-section"><h4>Customer Information</h4><p><strong>Name:</strong> {showOrderDetail.name}</p><p><strong>Email:</strong> {showOrderDetail.email}</p><p><strong>Phone:</strong> {showOrderDetail.phone || '—'}</p><p><strong>Address:</strong> {showOrderDetail.address || '—'}</p></div>
+              <div className="detail-section"><h4>Order Information</h4><p><strong>Order ID:</strong> #{showOrderDetail.order_id}</p><p><strong>Date:</strong> {new Date(showOrderDetail.created_at).toLocaleString()}</p><p><strong>Payment Method:</strong> {showOrderDetail.payment_method === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</p><p><strong>Status:</strong> {getStatusBadge(showOrderDetail.status)}</p></div>
+              <div className="detail-section"><h4>Items</h4><table className="items-table"><thead><tr><th>Product</th><th>Quantity</th><th>Price</th><th>Total</th></tr></thead><tbody>{showOrderDetail.items?.map((item, idx) => (<tr key={idx}><td>{item.name}</td><td>{item.quantity}</td><td>₹{item.price}</td><td>₹{item.price * item.quantity}</td></tr>))}</tbody></table></div>
+              <div className="detail-total"><strong>Total Amount: ₹{(showOrderDetail.total || 0).toLocaleString()}</strong></div>
             </div>
           </div>
         </div>
@@ -1060,13 +653,8 @@ const Admin = () => {
       {showDiseaseModal && selectedDiseaseDetail && (
         <div className="modal-overlay" onClick={() => setShowDiseaseModal(false)}>
           <div className="detail-modal" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowDiseaseModal(false)}>
-              <FaTimes />
-            </button>
-            <div className="modal-header">
-              <h3><FaBug /> Disease Analysis Details</h3>
-              <span className="user-badge">{selectedDiseaseDetail.user?.name}</span>
-            </div>
+            <button className="modal-close" onClick={() => setShowDiseaseModal(false)}><FaTimes /></button>
+            <div className="modal-header"><h3><FaBug /> Disease Analysis Details</h3><span className="user-badge">{selectedDiseaseDetail.user?.name}</span></div>
             <div className="modal-body">
               <div className="detail-grid">
                 <div className="detail-image">
@@ -1077,18 +665,9 @@ const Admin = () => {
                   <p><FaCalendar /> {new Date(selectedDiseaseDetail.created_at).toLocaleString()}</p>
                 </div>
                 <div className="detail-info">
-                  <div className="detail-item">
-                    <strong>Disease:</strong> <span>{selectedDiseaseDetail.disease}</span>
-                  </div>
-                  <div className="detail-item">
-                    <strong>Plant:</strong> <span>{getPlantIcon(selectedDiseaseDetail.disease)} {selectedDiseaseDetail.plant_name}</span>
-                  </div>
-                  <div className="detail-item">
-                    <strong>Confidence:</strong> 
-                    <span className={`confidence-badge ${getConfidenceClass(selectedDiseaseDetail.confidence)}`}>
-                      {selectedDiseaseDetail.confidence?.toFixed(1)}%
-                    </span>
-                  </div>
+                  <div className="detail-item"><strong>Disease:</strong> <span>{selectedDiseaseDetail.disease}</span></div>
+                  <div className="detail-item"><strong>Plant:</strong> <span>{getPlantIcon(selectedDiseaseDetail.disease)} {selectedDiseaseDetail.plant_name}</span></div>
+                  <div className="detail-item"><strong>Confidence:</strong> <span className={`confidence-badge ${getConfidenceClass(selectedDiseaseDetail.confidence)}`}>{selectedDiseaseDetail.confidence?.toFixed(1)}%</span></div>
                 </div>
               </div>
               {selectedDiseaseDetail.gemini_response && (
@@ -1100,6 +679,39 @@ const Admin = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Product Modal */}
+      {showAddProduct && (
+        <div className="modal-overlay" onClick={() => setShowAddProduct(false)}>
+          <div className="product-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h3>Add New Product</h3><button className="close-modal" onClick={() => setShowAddProduct(false)}><FaTimes /></button></div>
+            <div className="modal-body">
+              <div className="form-group"><label>Product Name *</label><input type="text" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} placeholder="Enter product name" /></div>
+              <div className="form-row"><div className="form-group"><label>Price (₹) *</label><input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: e.target.value})} placeholder="Current price" /></div><div className="form-group"><label>Original Price (₹)</label><input type="number" value={newProduct.original_price} onChange={(e) => setNewProduct({...newProduct, original_price: e.target.value})} placeholder="Original price" /></div></div>
+              <div className="form-row"><div className="form-group"><label>Category</label><select value={newProduct.category} onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}><option value="fertilizer">Fertilizer</option><option value="pesticide">Pesticide</option><option value="tool">Tool</option></select></div><div className="form-group"><label>Stock</label><input type="number" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})} placeholder="Stock quantity" /></div></div>
+              <div className="form-group"><label>Product Photo</label><div className="photo-upload-area" onClick={() => fileInputRef.current.click()}><input type="file" ref={fileInputRef} accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />{uploadingPhoto ? <div className="uploading">Uploading...</div> : productPhoto ? <div className="photo-preview"><img src={productPhoto} alt="Preview" onError={(e) => { e.target.src = 'https://picsum.photos/400/400?random=1' }} /><FaImage /></div> : <div className="upload-placeholder"><FaUpload /><p>Click to upload product photo</p></div>}</div></div>
+              <div className="form-group"><label>Description</label><textarea rows="3" value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} placeholder="Product description" /></div>
+              <div className="form-group"><label>Icon/Emoji</label><input type="text" value={newProduct.image} onChange={(e) => setNewProduct({...newProduct, image: e.target.value})} placeholder="🌱" maxLength="2" /></div>
+            </div>
+            <div className="modal-footer"><button className="cancel-btn" onClick={() => setShowAddProduct(false)}>Cancel</button><button className="submit-btn" onClick={handleAddProduct}><FaCheck /> Add Product</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Doctor Modal */}
+      {showAddDoctor && (
+        <div className="modal-overlay" onClick={() => setShowAddDoctor(false)}>
+          <div className="product-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header"><h3>Add New Doctor/Agronomist</h3><button className="close-modal" onClick={() => setShowAddDoctor(false)}><FaTimes /></button></div>
+            <div className="modal-body">
+              <div className="form-group"><label>Full Name *</label><input type="text" value={newDoctor.name} onChange={(e) => setNewDoctor({...newDoctor, name: e.target.value})} placeholder="Dr. John Doe" /></div>
+              <div className="form-group"><label>Speciality *</label><input type="text" value={newDoctor.speciality} onChange={(e) => setNewDoctor({...newDoctor, speciality: e.target.value})} placeholder="Crop Disease Specialist" /></div>
+              <div className="form-row"><div className="form-group"><label>Phone</label><input type="tel" value={newDoctor.phone} onChange={(e) => setNewDoctor({...newDoctor, phone: e.target.value})} placeholder="9876543210" /></div><div className="form-group"><label>Email</label><input type="email" value={newDoctor.email} onChange={(e) => setNewDoctor({...newDoctor, email: e.target.value})} placeholder="doctor@example.com" /></div></div>
+            </div>
+            <div className="modal-footer"><button className="cancel-btn" onClick={() => setShowAddDoctor(false)}>Cancel</button><button className="submit-btn" onClick={handleAddDoctor}><FaCheck /> Add Doctor</button></div>
           </div>
         </div>
       )}
