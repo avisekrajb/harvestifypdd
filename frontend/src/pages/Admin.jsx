@@ -20,7 +20,7 @@ import {
   FaUsers, FaShoppingBag, FaProductHunt, FaMoneyBillWave, 
   FaClock, FaChartLine, FaBox, FaUser, FaTrash, FaPlus, 
   FaTimes, FaCheck, FaEnvelope, FaPhone, FaCalendar, 
-  FaStethoscope, FaImage, FaUpload, FaEye, FaBug
+  FaStethoscope, FaImage, FaUpload, FaEye,FaFlask,FaBug
 } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
