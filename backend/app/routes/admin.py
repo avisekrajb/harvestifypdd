@@ -702,3 +702,117 @@ def get_disease_history_detail(history_id):
     except Exception as e:
         logger.error(f"Error fetching disease history detail: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+
+
+
+# ==================== MESSAGES ENDPOINTS ====================
+
+@bp.route('/messages', methods=['GET', 'OPTIONS'])
+@jwt_required()
+def get_messages():
+    """Get all contact messages"""
+    try:
+        # Get current user to verify admin role
+        user_id = get_jwt_identity()
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Access denied. Admin only.'}), 403
+        
+        messages = list(db.messages.find().sort('created_at', -1))
+        for message in messages:
+            message['_id'] = str(message['_id'])
+        
+        return jsonify({'messages': messages})
+    except Exception as e:
+        logger.error(f"Error fetching messages: {e}")
+        return jsonify({'error': str(e), 'messages': []}), 500
+
+@bp.route('/messages', methods=['POST', 'OPTIONS'])
+def create_message():
+    """Create a new contact message (public endpoint)"""
+    try:
+        data = request.get_json()
+        
+        if not data.get('name') or not data.get('email') or not data.get('message'):
+            return jsonify({'error': 'Name, email, and message are required'}), 400
+        
+        message_data = {
+            'name': data.get('name'),
+            'email': data.get('email'),
+            'message': data.get('message'),
+            'read': False,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        }
+        
+        result = db.messages.insert_one(message_data)
+        return jsonify({'message': 'Message sent successfully', 'id': str(result.inserted_id)}), 201
+    except Exception as e:
+        logger.error(f"Error creating message: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/messages/<message_id>/read', methods=['PUT', 'OPTIONS'])
+@jwt_required()
+def mark_message_read(message_id):
+    """Mark a message as read"""
+    try:
+        # Get current user to verify admin role
+        user_id = get_jwt_identity()
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Access denied. Admin only.'}), 403
+        
+        if not message_id:
+            return jsonify({'error': 'Message ID is required'}), 400
+        
+        try:
+            obj_id = ObjectId(message_id)
+        except:
+            return jsonify({'error': 'Invalid message ID format'}), 400
+        
+        result = db.messages.update_one(
+            {'_id': obj_id},
+            {'$set': {'read': True, 'updated_at': datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Message not found'}), 404
+        
+        return jsonify({'message': 'Message marked as read'})
+    except Exception as e:
+        logger.error(f"Error marking message read: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/messages/<message_id>', methods=['DELETE', 'OPTIONS'])
+@jwt_required()
+def delete_message(message_id):
+    """Delete a message"""
+    try:
+        # Get current user to verify admin role
+        user_id = get_jwt_identity()
+        user = db.users.find_one({'_id': ObjectId(user_id)})
+        
+        if not user or user.get('role') != 'admin':
+            return jsonify({'error': 'Access denied. Admin only.'}), 403
+        
+        if not message_id:
+            return jsonify({'error': 'Message ID is required'}), 400
+        
+        try:
+            obj_id = ObjectId(message_id)
+        except:
+            return jsonify({'error': 'Invalid message ID format'}), 400
+        
+        result = db.messages.delete_one({'_id': obj_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Message not found'}), 404
+        
+        return jsonify({'message': 'Message deleted successfully'})
+    except Exception as e:
+        logger.error(f"Error deleting message: {e}")
+        return jsonify({'error': str(e)}), 500
