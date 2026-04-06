@@ -265,25 +265,45 @@ const Admin = () => {
     }
   }
 
-  const handleStatusUpdate = async (orderId, status) => {
-    try {
-      await updateOrderStatus(orderId, status)
-      toast.success('Order status updated')
-      fetchDashboardData()
-    } catch (error) {
-      toast.error('Failed to update status')
-    }
+const handleStatusUpdate = async (orderId, status) => {
+  console.log('🔄 Status Update - Order ID:', orderId, 'Status:', status)
+  
+  if (!orderId) {
+    toast.error('Order ID is missing')
+    return
   }
+  
+  try {
+    const result = await updateOrderStatus(orderId, status)
+    console.log('✅ Status update result:', result)
+    toast.success('Order status updated successfully!')
+    fetchDashboardData() // Refresh the data
+  } catch (error) {
+    console.error('❌ Status update error:', error)
+    console.error('Error response:', error.response?.data)
+    toast.error(error.response?.data?.error || 'Failed to update status')
+  }
+}
 
-  const handleAssignDoctor = async (orderId, doctorName) => {
-    try {
-      await updateOrderStatus(orderId, null, doctorName)
-      toast.success(`Doctor assigned: ${doctorName || 'None'}`)
-      fetchDashboardData()
-    } catch (error) {
-      toast.error('Failed to assign doctor')
-    }
+const handleAssignDoctor = async (orderId, doctorName) => {
+  console.log('👨‍⚕️ Assign Doctor - Order ID:', orderId, 'Doctor:', doctorName)
+  
+  if (!orderId) {
+    toast.error('Order ID is missing')
+    return
   }
+  
+  try {
+    const result = await updateOrderStatus(orderId, null, doctorName)
+    console.log('✅ Doctor assign result:', result)
+    toast.success(`Doctor ${doctorName || 'removed'} successfully!`)
+    fetchDashboardData() // Refresh the data
+  } catch (error) {
+    console.error('❌ Doctor assign error:', error)
+    console.error('Error response:', error.response?.data)
+    toast.error(error.response?.data?.error || 'Failed to assign doctor')
+  }
+}
 
   const handleDeleteProduct = async (productId) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
