@@ -141,11 +141,16 @@ export const getUserOrders = async () => {
   return response.data
 }
 
+// ==================== ORDER APIs ====================
 export const updateOrderStatus = async (orderId, status, doctorName = null) => {
+  console.log('API call - updateOrderStatus:', { orderId, status, doctorName })
+  
   const response = await api.put(`/admin/orders/${orderId}/status`, { 
     status, 
     doctor_name: doctorName 
   })
+  
+  console.log('API response:', response.data)
   return response.data
 }
 
