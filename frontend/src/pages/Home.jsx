@@ -26,16 +26,16 @@ const Home = () => {
   ]
 
   const testimonials = [
-    { name: 'Ramesh Kumar', role: 'Rice Farmer', content: 'Harvestify helped me increase my yield by 40% with their AI recommendations!', rating: 5, avatar: '👨‍🌾' },
-    { name: 'Priya Sharma', role: 'Organic Farmer', content: 'The disease detection feature saved my entire tomato crop. Highly recommend!', rating: 5, avatar: '👩‍🌾' },
-    { name: 'Suresh Patel', role: 'Commercial Farmer', content: 'Best platform for modern farming. The products are top quality.', rating: 5, avatar: '👨‍🌾' }
+    { name: 'Dipendra Gaderi', role: 'Rice Farmer', content: 'Harvestify helped me increase my yield by 40% with their AI recommendations!', rating: 5, avatar: '👨‍🌾' },
+    { name: 'Bikash Sahani', role: 'Organic Farmer', content: 'The disease detection feature saved my entire tomato crop. Highly recommend!', rating: 5, avatar: '👩‍🌾' },
+    { name: 'Anurag Gupta', role: 'Commercial Farmer', content: 'Best platform for modern farming. The products are top quality.', rating: 5, avatar: '👨‍🌾' }
   ]
 
   const teamMembers = [
     { name: 'Abhishek Rajbanshi', role: 'Founder & CEO', bio: 'Full-stack developer with passion for AgriTech', avatar: '👨‍💻', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } },
     { name: 'Balu Pinisetti', role: 'Lead Agronomist', bio: 'Expert in crop disease management', avatar: '👨‍🌾', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } },
-    { name: 'Jyoti Kumari', role: 'AI Research Scientist', bio: 'Specialist in machine learning models', avatar: '👩‍🔬', icon: '👩', social: { linkedin: '#', twitter: '#', github: '#' } },
-    { name: 'Swami Nathan', role: 'Product Manager', bio: 'Agri-business expert with 10+ years experience', avatar: '👨‍💼', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } }
+    { name: 'Jyoti', role: 'AI Research Scientist', bio: 'Specialist in machine learning models', avatar: '👩‍🔬', icon: '👩', social: { linkedin: '#', twitter: '#', github: '#' } },
+    { name: 'Swami', role: 'Product Manager', bio: 'Agri-business expert with 10+ years experience', avatar: '👨‍💼', icon: '👨', social: { linkedin: '#', twitter: '#', github: '#' } }
   ]
 
   const handleContact = (e) => {
@@ -127,7 +127,7 @@ const Home = () => {
         <div className="container">
           <p className="trust-label">Trusted By Leading Agricultural Organizations</p>
           <div className="trust-badges">
-            <span>🏆 Best AgriTech 2024</span>
+            <span>🏆 Best AgriTech 2026</span>
             <span>⭐ 4.9 Rating</span>
             <span>🌱 50K+ Farmers</span>
             <span>🔬 AI Certified</span>
@@ -314,14 +314,14 @@ const Home = () => {
                   <FaPhoneAlt className="contact-icon" />
                   <div>
                     <strong>Phone</strong>
-                    <p>+91 98765 43210</p>
+                    <p>+91 9065856693</p>
                   </div>
                 </div>
                 <div className="contact-item">
                   <FaEnvelope className="contact-icon" />
                   <div>
                     <strong>Email</strong>
-                    <p>support@harvestify.in</p>
+                    <p>@harvestify@gmail.com</p>
                   </div>
                 </div>
                 <div className="contact-item">
